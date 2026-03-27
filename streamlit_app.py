@@ -155,3 +155,22 @@ with tab3:
 
     st.caption(
         "Note : Le bilan acier est une estimation basée sur un ratio kg/m³ adaptable selon la densité des armatures calculées.")
+
+# --- SECTION SOUTIEN ---
+st.sidebar.markdown("---")
+st.sidebar.write("🏗️ **Expertise & Soutien**")
+st.sidebar.info("Cet outil est conçu pour faciliter le travail des ingénieurs sur le terrain.")
+
+# Ton lien (même en attente, on le met !)
+mon_lien_bmc = "https://www.buymeacoffee.com/hasina.civil"
+
+st.sidebar.markdown(f'''
+<a href="{mon_lien_bmc}" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" 
+    alt="Soutenir mon travail" 
+    style="height: 50px !important;width: 180px !important;" >
+</a>
+''', unsafe_allow_html=True)
+
+st.sidebar.write("✉️ [Contact : hasinarabialahy@gmail.com](mailto:hasinarabialahy@gmail.com)")
+

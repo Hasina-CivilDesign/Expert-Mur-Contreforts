@@ -149,24 +149,31 @@ with tab3:
 
     poids_acier_ml = vol_beton_ml * ratio_base
 
+   # 1. On finit d'abord l'affichage des résultats par mètre (ml)
     res1, res2 = st.columns(2)
     res1.success(f"Volume Béton : **{vol_beton_ml:.2f} m³/ml**")
-    # --- LE TREMPLIN ---
-    # Si 'volume_beton_total' existe déjà dans ton calcul de mur, on l'utilise.
-    # Sinon, on met 1.0 par défaut.
-    if 'volume_beton_total' in locals() or 'volume_beton_total' in globals():
-        valeur_par_defaut = volume_beton_total
-    else:
-        valeur_par_defaut = 1.0
+    res2.success(f"Poids Acier estimé : **{poids_acier_ml:.0f} kg/ml**")
 
-# Nouveau champ de saisie qui utilise le calcul du haut
-volume_total = st.number_input(
-    "Volume total à réaliser (m³)", 
-    min_value=0.1, 
-    value=float(valeur_par_defaut), 
-    step=0.1,
-    help="Ce volume est automatiquement récupéré de votre calcul de mur ci-dessus."
-)
+    st.caption("Note : Le bilan acier est une estimation basée sur un ratio kg/m³ adaptable.")
+
+    # 2. On passe au calcul GLOBAL (Le Tremplin)
+    st.divider()
+    st.subheader("📦 Métré Global du Chantier")
+    
+    # On demande la longueur totale pour le chantier
+    L_totale = st.number_input("Longueur totale du mur à construire (m)", min_value=1.0, value=10.0)
+    
+    # Calcul des valeurs totales
+    vol_global = vol_beton_ml * L_totale
+    
+    # 3. Nouveau champ de saisie automatique
+    volume_total = st.number_input(
+        "Volume total à réaliser (m³)", 
+        min_value=0.1, 
+        value=float(vol_global), 
+        step=0.1,
+        help="Ce volume est automatiquement récupéré de votre calcul de mur ci-dessus."
+    )
     res2.success(f"Poids Acier estimé : **{poids_acier_ml:.0f} kg/ml**")
 
     st.caption(

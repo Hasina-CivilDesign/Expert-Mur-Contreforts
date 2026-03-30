@@ -31,6 +31,10 @@ with st.sidebar:
     L_cont_sug = round(B - avant_rideau - 0.20, 2)
     L_cont = st.number_input("Largeur contrefort à la base (m)", value=L_cont_sug)
 
+    st.header("3. Paramètres Chantier")
+    # C'EST ICI LA NOUVEAUTÉ
+    L_totale = st.number_input("Longueur totale du mur (m)", value=10.0, step=1.0, help="Utilisé pour le calcul global des matériaux.")
+
 # --- MOTEUR DE CALCUL ---
 phi_rad = math.radians(phi_deg)
 ka = (math.tan(math.radians(45) - phi_rad / 2)) ** 2
@@ -149,120 +153,58 @@ with tab3:
 
     poids_acier_ml = vol_beton_ml * ratio_base
 
-   # 1. On finit d'abord l'affichage des résultats par mètre (ml)
+  # --- 1. AFFICHAGE DES RÉSULTATS PAR MÈTRE (DANS L'ONGLET 3) ---
     res1, res2 = st.columns(2)
     res1.success(f"Volume Béton : **{vol_beton_ml:.2f} m³/ml**")
     res2.success(f"Poids Acier estimé : **{poids_acier_ml:.0f} kg/ml**")
 
-    st.caption("Note : Le bilan acier est une estimation basée sur un ratio kg/m³ adaptable.")
-
-    # 2. On passe au calcul GLOBAL (Le Tremplin)
-    st.divider()
-    st.subheader("📦 Métré Global du Chantier")
-    
-    # On demande la longueur totale pour le chantier
-    L_totale = st.number_input("Longueur totale du mur à construire (m)", min_value=1.0, value=10.0)
-    
-    # Calcul des valeurs totales
+    # --- 2. CALCUL DES TOTAUX GLOBAUX ---
     vol_global = vol_beton_ml * L_totale
-    
-    # 3. Nouveau champ de saisie automatique
-    volume_total = st.number_input(
-        "Volume total à réaliser (m³)", 
-        min_value=0.1, 
-        value=float(vol_global), 
-        step=0.1,
-        help="Ce volume est automatiquement récupéré de votre calcul de mur ci-dessus."
-    )
-    res2.success(f"Poids Acier estimé : **{poids_acier_ml:.0f} kg/ml**")
+    poids_acier_global = poids_acier_ml * L_totale
 
-    st.caption(
-        "Note : Le bilan acier est une estimation basée sur un ratio kg/m³ adaptable selon la densité des armatures calculées.")
+    st.info(f"Pour une longueur de **{L_totale}m**, le chantier nécessite **{vol_global:.2f} m³** de béton et **{poids_acier_global:.0f} kg** d'acier.")
 
-# --- SECTION SOUTIEN ---
-st.sidebar.markdown("---")
-st.sidebar.write("🏗️ **Expertise & Soutien**")
-st.sidebar.info("Cet outil est conçu pour faciliter le travail des ingénieurs sur le terrain.")
-
-# Ton lien (même en attente, on le met !)
-mon_lien_bmc = "https://www.buymeacoffee.com/hasina.civil"
-
-st.sidebar.markdown(f'''
-<a href="{mon_lien_bmc}" target="_blank">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" 
-    alt="Soutenir mon travail" 
-    style="height: 50px !important;width: 180px !important;" >
-</a>
-''', unsafe_allow_html=True)
-
-st.sidebar.write("✉️ [Contact : hasinarabialahy@gmail.com](mailto:hasinarabialahy@gmail.com)")
-
-import streamlit as st
-
-# --- SECTION CALCULATEUR DE MATÉRIAUX (Métré Rapide) ---
+# --- 3. SECTION CALCULATEUR DE MATÉRIAUX (HORS DES ONGLETS) ---
 st.divider()
 st.header("📊 Calculateur de Matériaux (Métré Rapide)")
-st.write("Estimez vos quantités de ciment, sable et gravier pour l'ensemble du mur.")
+st.write("Estimez vos quantités pour l'ensemble du mur (Ciment, Sable, Gravier).")
 
-# 1. On récupère le volume calculé plus haut s'il existe, sinon 1.0
-valeur_auto = float(vol_global) if 'vol_global' in locals() else 1.0
+# Le volume est automatiquement lié au calcul du haut !
+volume_final = st.number_input("Volume total de béton à traiter (m³)", value=float(vol_global))
 
-# 2. UN SEUL champ de saisie pour le volume
-volume_final = st.number_input(
-    "Volume total de béton à traiter (m³)", 
-    min_value=0.1, 
-    value=valeur_auto, 
-    step=0.1,
-    help="Cette valeur est synchronisée avec votre calcul de mur ci-dessus."
-)
+type_travaux = st.selectbox("Type de travaux", ["Béton (Dalle, Poteau, Poutre)", "Mortier Moellons", "Mortier Briques"])
 
-# Choix du type de travaux
-type_travaux = st.selectbox(
-    "Quel type de travaux ?",
-    ["Béton (Dalle, Poteau, Poutre)", "Mortier pour Moellons", "Mortier pour Briques"]
-)
+col_mat1, col_mat2 = st.columns(2)
+with col_mat1:
+    dosage = st.selectbox("Dosage Ciment (kg/m³)", [250, 300, 350, 400], index=2)
+with col_mat2:
+    poids_sac = st.number_input("Poids du sac (kg)", value=50)
 
-col1, col2 = st.columns(2)
-with col1:
-    if type_travaux == "Béton (Dalle, Poteau, Poutre)":
-        dosage = st.selectbox("Dosage Ciment (kg/m³)", [250, 300, 350, 400], index=2)
-    else:
-        dosage = st.selectbox("Dosage Ciment (kg/m³)", [150, 200, 250, 300], index=1)
-
-with col2:
-    poids_sac = st.number_input("Poids d'un sac (kg)", value=50)
-
-# --- CALCULS (On utilise volume_final ici) ---
-if type_travaux == "Béton (Dalle, Poteau, Poutre)":
-    v_ciment = volume_final * (1/6)
+# Calculs de dosage (Ratios simplifiés pour le terrain)
+if "Béton" in type_travaux:
+    # Ratio 1:2:3 -> 1 part ciment, 2 parts sable, 3 parts gravier
     v_sable = volume_final * (2/6)
     v_gravier = volume_final * (3/6)
     masse_ciment = volume_final * dosage
-    nb_sacs = masse_ciment / poids_sac
-    titre = "RÉSULTATS BÉTON"
 else:
-    ratio_mortier = 0.30 if "Moellons" in type_travaux else 0.20
-    v_mortier_reel = volume_final * ratio_mortier
-    masse_ciment = v_mortier_reel * dosage
-    nb_sacs = masse_ciment / poids_sac
-    v_sable = v_mortier_reel * 0.9
+    # Mortier (30% de vide pour moellons, 20% pour briques)
+    ratio_v = 0.30 if "Moellons" in type_travaux else 0.20
+    vol_mortier = volume_final * ratio_v
+    v_sable = vol_mortier * 0.9
     v_gravier = 0
-    titre = f"RÉSULTATS {type_travaux.upper()}"
+    masse_ciment = vol_mortier * dosage
 
-# --- AFFICHAGE DES RÉSULTATS ---
-st.subheader(f"🏗️ {titre}")
-res1, res2, res3 = st.columns(3)
-with res1:
-    st.metric("Ciment (Sacs)", f"{nb_sacs:.1f}")
-with res2:
-    st.metric("Sable (m³)", f"{v_sable:.2f}")
-with res3:
-    if v_gravier > 0:
-        st.metric("Gravier (m³)", f"{v_gravier:.2f}")
+nb_sacs = masse_ciment / poids_sac
 
-# --- PETIT BONUS BUDGET (Optionnel) ---
-with st.expander("💰 Estimation du Budget (Ar)"):
-    prix_sac = st.number_input("Prix d'un sac de ciment (Ar)", value=38000, step=500)
-    budget_ciment = nb_sacs * prix_sac
-    st.write(f"**Budget Ciment estimé : {int(budget_ciment):,} Ar**".replace(",", " "))
+# Affichage Final
+r_m1, r_m2, r_m3 = st.columns(3)
+r_m1.metric("Ciment (Sacs)", f"{nb_sacs:.1f}")
+r_m2.metric("Sable (m³)", f"{v_sable:.2f}")
+if v_gravier > 0:
+    r_m3.metric("Gravier (m³)", f"{v_gravier:.2f}")
 
+# --- BUDGET ---
+with st.expander("💰 Estimation Budget Ciment (Ariary)"):
+    prix_sac = st.number_input("Prix d'un sac (Ar)", value=38000, step=500)
+    total_ar = nb_sacs * prix_sac
+    st.write(f"### Budget Ciment : **{int(total_ar):,} Ar**".replace(",", " "))

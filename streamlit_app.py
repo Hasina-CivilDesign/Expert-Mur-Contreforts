@@ -199,10 +199,22 @@ st.sidebar.write("✉️ [Contact : hasinarabialahy@gmail.com](mailto:hasinarabi
 
 import streamlit as st
 
-# --- SECTION CALCULATEUR DE CHANTIER (Métré Rapide) ---
+# --- SECTION CALCULATEUR DE MATÉRIAUX (Métré Rapide) ---
 st.divider()
 st.header("📊 Calculateur de Matériaux (Métré Rapide)")
-st.write("Estimez vos quantités de ciment, sable et gravier en un clic.")
+st.write("Estimez vos quantités de ciment, sable et gravier pour l'ensemble du mur.")
+
+# 1. On récupère le volume calculé plus haut s'il existe, sinon 1.0
+valeur_auto = float(vol_global) if 'vol_global' in locals() else 1.0
+
+# 2. UN SEUL champ de saisie pour le volume
+volume_final = st.number_input(
+    "Volume total de béton à traiter (m³)", 
+    min_value=0.1, 
+    value=valeur_auto, 
+    step=0.1,
+    help="Cette valeur est synchronisée avec votre calcul de mur ci-dessus."
+)
 
 # Choix du type de travaux
 type_travaux = st.selectbox(
@@ -210,55 +222,43 @@ type_travaux = st.selectbox(
     ["Béton (Dalle, Poteau, Poutre)", "Mortier pour Moellons", "Mortier pour Briques"]
 )
 
-# Volume total à couler
-volume_total = st.number_input("Volume total à réaliser (m³)", min_value=0.1, value=1.0, step=0.1)
-
 col1, col2 = st.columns(2)
-
 with col1:
-    # Dosage ciment
     if type_travaux == "Béton (Dalle, Poteau, Poutre)":
         dosage = st.selectbox("Dosage Ciment (kg/m³)", [250, 300, 350, 400], index=2)
     else:
         dosage = st.selectbox("Dosage Ciment (kg/m³)", [150, 200, 250, 300], index=1)
 
 with col2:
-    # Poids du sac
     poids_sac = st.number_input("Poids d'un sac (kg)", value=50)
 
-# --- CALCULS ---
+# --- CALCULS (On utilise volume_final ici) ---
 if type_travaux == "Béton (Dalle, Poteau, Poutre)":
-    # Ratio standard 1:2:3
-    v_ciment = volume_total * (1/6)
-    v_sable = volume_total * (2/6)
-    v_gravier = volume_total * (3/6)
-    masse_ciment = volume_total * dosage
+    v_ciment = volume_final * (1/6)
+    v_sable = volume_final * (2/6)
+    v_gravier = volume_final * (3/6)
+    masse_ciment = volume_final * dosage
     nb_sacs = masse_ciment / poids_sac
     titre = "RÉSULTATS BÉTON"
-    
 else:
-    # Pour le mortier (moellons ou briques)
-    # On estime le volume de mortier nécessaire dans le mur (ex: 30% pour moellons, 20% pour briques)
     ratio_mortier = 0.30 if "Moellons" in type_travaux else 0.20
-    v_mortier_reel = volume_total * ratio_mortier
+    v_mortier_reel = volume_final * ratio_mortier
     masse_ciment = v_mortier_reel * dosage
     nb_sacs = masse_ciment / poids_sac
-    v_sable = v_mortier_reel * 0.9 # Estimation sable pour mortier
+    v_sable = v_mortier_reel * 0.9
     v_gravier = 0
     titre = f"RÉSULTATS {type_travaux.upper()}"
 
 # --- AFFICHAGE DES RÉSULTATS ---
 st.subheader(f"🏗️ {titre}")
 res1, res2, res3 = st.columns(3)
-
 with res1:
     st.metric("Ciment (Sacs)", f"{nb_sacs:.1f}")
 with res2:
-       # On utilise :.2f pour afficher 2 chiffres après la virgule
-    st.metric("Sable (m³)", f"{v_sable:.2f}" if v_sable > 0 else "0.00")
+    st.metric("Sable (m³)", f"{v_sable:.2f}")
 with res3:
     if v_gravier > 0:
-        st.metric("Gravier (m³)", f"{v_gravier:.3f}")
+        st.metric("Gravier (m³)", f"{v_gravier:.2f}")
 
 # --- PETIT BONUS BUDGET (Optionnel) ---
 with st.expander("💰 Estimation du Budget (Ar)"):

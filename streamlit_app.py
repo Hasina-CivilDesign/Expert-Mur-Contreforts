@@ -231,7 +231,9 @@ res1, res2, res3 = st.columns(3)
 with res1:
     st.metric("Ciment (Sacs)", f"{nb_sacs:.1f}")
 with res2:
-    st.metric("Sable (m³)", f"{v_sable:.2d}" if v_sable > 0 else f"{v_sable:.3f}")
+   with res2:
+    # On utilise :.2f pour afficher 2 chiffres après la virgule
+    st.metric("Sable (m³)", f"{v_sable:.2f}" if v_sable > 0 else "0.00")
 with res3:
     if v_gravier > 0:
         st.metric("Gravier (m³)", f"{v_gravier:.3f}")

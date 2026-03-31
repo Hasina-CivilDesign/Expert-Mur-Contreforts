@@ -179,6 +179,12 @@ elif menu == "📐 Semelle Filante":
         fyd = 500
         gamma_beton = 25.0
         
+        st.header("🧱 Longrine & Remblai")
+        B_longrine = st.number_input("Largeur longrine (m)", value=0.20)
+        h_longrine = st.number_input("Hauteur longrine (m)", value=0.45)
+        H_remblai = st.number_input("Hauteur remblai au-dessus semelle (m)", value=0.50)
+        gamma_rem = st.number_input("Poids vol. remblai (kN/m³)", value=18.0)
+
         st.header("🏗️ Charges Poteaux")
         entraxe_str = st.text_input(f"Entraxes ({nb_poteaux-1} valeurs)", value="2.0 3.0")
         G_str = st.text_input(f"Charges G en kN ({nb_poteaux} valeurs)", value="150 250 300")
@@ -192,10 +198,16 @@ elif menu == "📐 Semelle Filante":
         if len(entraxes) != nb_poteaux - 1 or len(G_list) != nb_poteaux or len(Q_list) != nb_poteaux:
             st.error("❌ Erreur : Nombre de valeurs incorrect.")
         else:
-            # --- CALCULS GÉOMÉTRIQUES ---
+            # --- CALCULS GÉOMÉTRIQUES & POIDS ---
             L_totale = sum(entraxes) + 2 * debord_ext
             S_semelle = B_semelle * L_totale
-            P_semelle = B_semelle * h_semelle * L_totale * gamma_beton
+            
+            # Poids propre semelle, longrine et remblai
+            P_semelle = S_semelle * h_semelle * gamma_beton
+            P_longrine = B_longrine * h_longrine * L_totale * gamma_beton
+            
+            l_debord_transv = (B_semelle - B_longrine) / 2 # Débord de chaque côté de la longrine
+            P_remblai = gamma_rem * H_remblai * (l_debord_transv * 2) * L_totale
             
             # --- CALCUL DU CENTRE DE GRAVITÉ (CG) ---
             pos_x = [debord_ext]
@@ -208,14 +220,15 @@ elif menu == "📐 Semelle Filante":
             x_milieu = L_totale / 2
             excentricite = x_cg - x_milieu
             
-            N_total_ser = sum(P_poteaux_total) + P_semelle
+            # Charge totale de service
+            N_total_ser = sum(P_poteaux_total) + P_semelle + P_longrine + P_remblai
             
             # --- CALCUL DES CONTRAINTES (Navier) ---
             sig1 = (N_total_ser / S_semelle) * (1 + 6 * excentricite / L_totale)
             sig2 = (N_total_ser / S_semelle) * (1 - 6 * excentricite / L_totale)
             sig_max = max(sig1, sig2)
 
-            t1, t2 = st.tabs(["📊 Analyse Stabilité", "🏗️ Ferraillage"])
+            t1, t2 = st.tabs(["📊 Analyse Stabilité", "🏗️ Ferraillage & Charges"])
 
             with t1:
                 st.subheader("📊 Analyse de la Portance & Équilibre")
@@ -226,29 +239,20 @@ elif menu == "📐 Semelle Filante":
 
                 # Graphique Expert
                 fig2, ax2 = plt.subplots(figsize=(10, 5))
-                
-                # 1. Zone du Tiers Central (en Jaune)
                 ax2.axvspan(L_totale/3, 2*L_totale/3, color='yellow', alpha=0.2, label="Tiers Central (Zone Stable)")
-                
-                # 2. Répartition des pressions
                 ax2.plot([0, L_totale], [sig1, sig2], color='navy', linewidth=3, label="Diagramme des contraintes")
                 ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.1, color='blue')
-                
-                # 3. Limite Sol
                 ax2.axhline(qadm, color='red', linestyle='--', label=f"Limite Sol ({qadm} kPa)")
-                
-                # 4. Marquage Centre de la semelle vs Centre de Gravité
                 ax2.axvline(x_milieu, color='black', linestyle='--', alpha=0.5, label="Axe Central Semelle")
                 ax2.axvline(x_cg, color='green', linewidth=2, label=f"R (Charge Totale) à {x_cg:.2f}m")
                 
-                # 5. Dessin des poteaux
                 for i, p_pos in enumerate(pos_x):
                     ax2.annotate('↓', (p_pos, sig_max*1.05), ha='center', fontsize=15, color='black')
                     ax2.text(p_pos, sig_max*1.15, f"P{i+1}", ha='center', fontweight='bold')
                 
                 ax2.set_xlabel("Longueur de la semelle (m)")
                 ax2.set_ylabel("Pression (kPa)")
-                ax2.set_ylim(bottom=0) # Pour voir le soulèvement si sig < 0
+                ax2.set_ylim(bottom=0)
                 ax2.legend(loc='upper right', fontsize='small')
                 ax2.grid(True, linestyle=':', alpha=0.6)
                 st.pyplot(fig2)
@@ -256,15 +260,51 @@ elif menu == "📐 Semelle Filante":
                 # Diagnostic
                 st.divider()
                 if abs(excentricite) <= L_totale / 6:
-                    st.success(f"✅ **L'excentricité ({abs(excentricite):.3f}m)** est dans le tiers central (e < {L_totale/6:.3f}m). La semelle est entièrement comprimée.")
+                    st.success(f"✅ **L'excentricité ({abs(excentricite):.3f}m)** est dans le tiers central. La semelle est entièrement comprimée.")
                 else:
-                    st.warning(f"⚠️ **Attention** : L'excentricité est hors du tiers central. Risque de décollement partiel de la semelle.")
+                    st.warning(f"⚠️ **Attention** : L'excentricité est hors du tiers central. Risque de décollement.")
                 
                 if sig_max > qadm:
-                    st.error(f"❌ **Dépassement** : La pression au sol dépasse la contrainte admissible de {qadm} kPa.")
+                    st.error(f"❌ **Dépassement** : La pression au sol ({sig_max:.1f} kPa) dépasse la capacité admissible ({qadm} kPa).")
+
+            with t2:
+                st.subheader("🧱 Ferraillage Transversal de la Semelle (par ml)")
+                
+                # Calcul simplifié à l'ELU (majoration arbitraire ~1.4 pour l'exemple)
+                # La contrainte nette qui fait fléchir la semelle = Réaction Sol - Poids Propres
+                p_net_ser = sig_max - (h_semelle * gamma_beton) - (H_remblai * gamma_rem)
+                p_net_elu = p_net_ser * 1.4 
+                
+                # Moment fléchissant dans la console (débord)
+                M_transv_elu = p_net_elu * (l_debord_transv**2) / 2
+                
+                # Section d'acier BAEL
+                d_utile = h_semelle - 0.05
+                fsu = fyd / 1.15
+                As_calc = (M_transv_elu * 1e-3) / (0.9 * d_utile * fsu) * 1e4 # en cm²/ml
+                
+                # Section minimale (règle des 0.15% à 0.20%)
+                As_min = 0.0015 * 100 * (h_semelle * 100)
+                As_final = max(As_calc, As_min)
+
+                c_a, c_b = st.columns(2)
+                c_a.metric("Moment fléchissant (ELU estimé)", f"{M_transv_elu:.2f} kNm/ml")
+                c_b.metric("Section d'acier (As)", f"{As_final:.2f} cm²/ml")
+                
+                if As_final == As_min:
+                    st.info("💡 La section calculée est très faible, on applique le **ferraillage minimum forfaitaire BAEL**.")
+
+                st.divider()
+                st.subheader("⏬ Descente de charges pour la Longrine")
+                q_G_longrine = (sum(G_list) + P_semelle + P_longrine + P_remblai) / L_totale
+                q_Q_longrine = sum(Q_list) / L_totale
+                
+                st.write(f"Charge permanente G répartie au sol : **{q_G_longrine:.2f} kN/m**")
+                st.write(f"Charge d'exploitation Q répartie au sol : **{q_Q_longrine:.2f} kN/m**")
+                st.success("👉 Notez ces valeurs pour dimensionner et ferrailler la longrine dans le module 'Poutre Continue'.")
 
     except Exception as e:
-        st.error(f"Erreur de calcul : {e}")
+        st.error(f"Erreur de calcul : Vérifiez vos données saisies ({e})")
 
 elif menu == "🌉 Poutre Continue":
     st.header("🌉 Calcul de Poutre Continue")

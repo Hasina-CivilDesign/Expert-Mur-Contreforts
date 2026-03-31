@@ -222,23 +222,23 @@ if as_max_trouve > 7 or As_cont > 30:
 poids_acier_ml = vol_beton_ml * ratio_base
 
   # --- 1. AFFICHAGE DES RÉSULTATS PAR MÈTRE (DANS L'ONGLET 3) ---
-    res1, res2 = st.columns(2)
-    res1.success(f"Volume Béton : **{vol_beton_ml:.2f} m³/ml**")
-    res2.success(f"Poids Acier estimé : **{poids_acier_ml:.0f} kg/ml**")
+res1, res2 = st.columns(2)
+res1.success(f"Volume Béton : **{vol_beton_ml:.2f} m³/ml**")
+res2.success(f"Poids Acier estimé : **{poids_acier_ml:.0f} kg/ml**")
 
     # --- 2. CALCUL DES TOTAUX GLOBAUX ---
-    vol_global = vol_beton_ml * L_totale
-    poids_acier_global = poids_acier_ml * L_totale
+vol_global = vol_beton_ml * L_totale
+poids_acier_global = poids_acier_ml * L_totale
 
     # --- CALCUL DES TOTAUX GLOBAUX ---
-    vol_global = vol_beton_ml * L_totale
-    poids_acier_global = poids_acier_ml * L_totale
+vol_global = vol_beton_ml * L_totale
+poids_acier_global = poids_acier_ml * L_totale
 
-    st.info(f"📍 **Synthèse pour {L_totale}m de linéaire :**")
+st.info(f"📍 **Synthèse pour {L_totale}m de linéaire :**")
     
-    col_glob1, col_glob2 = st.columns(2)
-    col_glob1.metric("Béton Total", f"{vol_global:.2f} m³")
-    col_glob2.metric("Acier Total", f"{poids_acier_global:.0f} kg")
+col_glob1, col_glob2 = st.columns(2)
+col_glob1.metric("Béton Total", f"{vol_global:.2f} m³")
+col_glob2.metric("Acier Total", f"{poids_acier_global:.0f} kg")
 
 # --- 3. SECTION CALCULATEUR DE MATÉRIAUX (HORS DES ONGLETS) ---
 st.divider()

@@ -168,7 +168,7 @@ as_max_trouve = 0
 z = 0.5
 H_rideau = H - hs
 
-    while z <= H_rideau:
+while z <= H_rideau:
         e_z = hr_haut + (hr_bas - hr_haut) * (z / H_rideau)
         p_z = ka * gamma_t * z
         m0 = (1.35 * p_z * e ** 2) / 8

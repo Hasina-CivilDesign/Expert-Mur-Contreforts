@@ -109,13 +109,28 @@ elif menu == "📐 Semelle Filante":
             # Dessin des poteaux (flèches)
             current_x = 0
             ax3.annotate(f"P1\n{list_G[0]}kN", (0, 0.3), xytext=(0, 0.8), arrowprops=dict(arrowstyle='->'))
-            for i, dist in enumerate(list_L):
-                current_x += dist
-                ax3.annotate(f"P{i+2}\n{list_G[i+1]}kN", (current_x, 0.3), xytext=(current_x, 0.8), arrowprops=dict(arrowstyle='->'))
+            # --- SCHÉMA DE LA SEMELLE CORRIGÉ ---
+            st.write("**Schéma de répartition des charges (Coupe longitudinale) :**")
+            fig3, ax3 = plt.subplots(figsize=(10, 3))
             
-            ax3.set_xlim(-1, L_totale_calc + 1)
-            ax3.set_ylim(0, 1.2)
-            ax3.axis('off')
+            # Dessin de la semelle (le béton)
+            ax3.add_patch(plt.Rectangle((0, 0), L_totale_calc, 0.3, color='lightgrey', label="Béton"))
+            
+            # Dessin des poteaux (Flèches verticales)
+            current_x = 0
+            positions_x = [0] + [sum(list_L[:i+1]) for i in range(len(list_L))]
+            
+            for i, x_pos in enumerate(positions_x):
+                # On dessine une flèche verticale parfaite
+                ax3.annotate('', xy=(x_pos, 0.3), xytext=(x_pos, 1.2),
+                             arrowprops=dict(facecolor='red', shrink=0.05, width=2, headwidth=8))
+                # Texte de la charge au-dessus
+                ax3.text(x_pos, 1.3, f"P{i+1}\n{list_G[i]+list_Q[i]}kN", 
+                         ha='center', va='bottom', fontweight='bold', color='red')
+
+            ax3.set_xlim(-0.5, L_totale_calc + 0.5)
+            ax3.set_ylim(-0.2, 2.0)
+            ax3.axis('off') # On cache les axes pour un look "Plan d'ingénieur"
             st.pyplot(fig3)
 
     except ValueError:

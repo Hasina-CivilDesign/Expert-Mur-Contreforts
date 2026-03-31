@@ -209,7 +209,7 @@ if As_cont > 40:
         st.error("⚠️ Section d'acier du contrefort très élevée. Augmentez la largeur L_cont ou l'épaisseur b0.")
 
     # --- AJOUT DU BILAN QUANTITATIF FINAL ---
-    st.divider()
+st.divider()
     st.subheader("📈 Bilan Quantitatif Global (au mètre linéaire)")
 
     # Calcul du volume de béton (Rideau + Semelle + Contreforts répartis sur l'entraxe)

@@ -162,7 +162,15 @@ with tab3:
     vol_global = vol_beton_ml * L_totale
     poids_acier_global = poids_acier_ml * L_totale
 
-    st.info(f"Pour une longueur de **{L_totale}m**, le chantier nécessite **{vol_global:.2f} m³** de béton et **{poids_acier_global:.0f} kg** d'acier.")
+    # --- CALCUL DES TOTAUX GLOBAUX ---
+    vol_global = vol_beton_ml * L_totale
+    poids_acier_global = poids_acier_ml * L_totale
+
+    st.info(f"📍 **Synthèse pour {L_totale}m de linéaire :**")
+    
+    col_glob1, col_glob2 = st.columns(2)
+    col_glob1.metric("Béton Total", f"{vol_global:.2f} m³")
+    col_glob2.metric("Acier Total", f"{poids_acier_global:.0f} kg")
 
 # --- 3. SECTION CALCULATEUR DE MATÉRIAUX (HORS DES ONGLETS) ---
 st.divider()
@@ -204,7 +212,23 @@ if v_gravier > 0:
     r_m3.metric("Gravier (m³)", f"{v_gravier:.2f}")
 
 # --- BUDGET ---
-with st.expander("💰 Estimation Budget Ciment (Ariary)"):
-    prix_sac = st.number_input("Prix d'un sac (Ar)", value=38000, step=500)
-    total_ar = nb_sacs * prix_sac
-    st.write(f"### Budget Ciment : **{int(total_ar):,} Ar**".replace(",", " "))
+# --- BUDGET ESTIMATIF DES MATÉRIAUX ---
+with st.expander("💰 Enveloppe Budgétaire (Estimation)"):
+    col_p1, col_p2 = st.columns(2)
+    
+    with col_p1:
+        prix_sac = st.number_input("Prix du sac de ciment (Ar)", value=38000, step=500)
+    with col_p2:
+        prix_acier_kg = st.number_input("Prix de l'acier (Ar/kg)", value=5500, step=100)
+
+    # Calculs financiers
+    total_ciment = nb_sacs * prix_sac
+    total_acier = poids_acier_global * prix_acier_kg
+    total_chantier = total_ciment + total_acier
+
+    st.markdown("---")
+    st.write(f"🛒 **Budget Ciment :** {int(total_ciment):,} Ar".replace(",", " "))
+    st.write(f"🏗️ **Budget Acier :** {int(total_acier):,} Ar".replace(",", " "))
+    st.subheader(f"💵 TOTAL ESTIMÉ : {int(total_chantier):,} Ar".replace(",", " "))
+    
+    st.caption("⚠️ Note : Ce budget est une estimation basée sur les ratios de ferraillage. Les prix du sable et gravier ne sont pas inclus ici.")

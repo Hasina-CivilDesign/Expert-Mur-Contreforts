@@ -17,7 +17,7 @@ with st.sidebar:
     )
     
     st.divider()
-    st.write("✉️ [Contact : hasinarabialahy@gmail.com](mailto:hasinarabialahy@gmail.com)")
+    st.write("✉️ [hasinarabialahy@gmail.com](mailto:hasinarabialahy@gmail.com)")
     
     mon_lien_bmc = "https://www.buymeacoffee.com/hasina.civil"
     st.markdown(f'''
@@ -30,17 +30,12 @@ with st.sidebar:
 
 if menu == "🏠 Accueil":
     st.header("Bienvenue sur votre Hub d'Ingénierie Structure")
-    st.write("""
-    Cet outil a été développé pour automatiser les calculs de génie civil selon les normes **BAEL**.
-    Sélectionnez un module dans le menu à gauche pour commencer vos calculs.
-    """)
-    st.info("🚀 **Précision & Rapidité** : Gagnez du temps sur vos descentes de charges et vos ferraillages.")
-    st.success("Logiciel optimisé pour les chantiers à Madagascar 🇲🇬")
+    st.write("Sélectionnez un module dans le menu à gauche pour commencer vos calculs.")
+    st.info("🚀 **Précision & Rapidité** : Logiciel optimisé pour les chantiers à Madagascar 🇲🇬")
 
 elif menu == "🧱 Mur à Contreforts":
     st.header("🏗️ Logiciel d'Expertise : Mur à Contreforts (BAEL)")
     
-    # --- DONNÉES D'ENTRÉE (SIDEBAR) ---
     with st.sidebar:
         st.header("1. Paramètres Sol & Béton")
         gamma_t = st.number_input("Poids volumique terre (kN/m3)", value=16.0)
@@ -56,11 +51,9 @@ elif menu == "🧱 Mur à Contreforts":
         avant_rideau = st.number_input("Patin (Avant-mur) (m)", value=round(B * 0.3, 2))
         b0 = st.number_input("Épaisseur contrefort (m)", value=0.30)
         L_cont = st.number_input("Largeur contrefort à la base (m)", value=round(B - avant_rideau - 0.20, 2))
+        L_totale = st.number_input("Longueur totale du mur (m)", value=10.0)
 
-        st.header("3. Paramètres Chantier")
-        L_totale = st.number_input("Longueur totale du mur (m)", value=10.0, step=1.0)
-
-    # --- MOTEUR DE CALCUL ---
+    # Calculs Mur
     phi_rad = math.radians(phi_deg)
     ka = (math.tan(math.radians(45) - phi_rad / 2)) ** 2
     gamma_b, fsu = 25.0, 400 / 1.15
@@ -73,263 +66,120 @@ elif menu == "🧱 Mur à Contreforts":
     W_terres = largeur_talon_calcul * (H - hs) * gamma_t
     V_reel = W_rideau + W_semelle + W_terres
 
-    dist_G, xg_rideau, xg_terres = B / 2, avant_rideau + (hr_bas / 2), B - (largeur_talon_calcul / 2)
+    dist_G = B / 2
+    xg_rideau = avant_rideau + (hr_bas / 2)
+    xg_terres = B - (largeur_talon_calcul / 2)
     Ms_total = (W_rideau * xg_rideau) + (W_semelle * dist_G) + (W_terres * xg_terres)
     xv = Ms_total / V_reel
     ex_poids = xv - dist_G
     Qk = 0.5 * ka * gamma_t * (H ** 2)
     Mr_elu = 1.35 * Qk * (H / 3)
     Mg, V_elu = Mr_elu - (V_reel * ex_poids), 1.35 * V_reel
-    e_finale = Mg / V_elu
-    sigma_1 = (V_elu / B) * (1 + 6 * e_finale / B)
-    sigma_2 = (V_elu / B) * (1 - 6 * e_finale / B)
+    e_mur = Mg / V_elu
+    sig1_m = (V_elu / B) * (1 + 6 * e_mur / B)
+    sig2_m = (V_elu / B) * (1 - 6 * e_mur / B)
 
-    # --- AFFICHAGE DES ONGLETS ---
     tab1, tab2, tab3 = st.tabs(["📊 Stabilité", "🧱 Rideau", "📐 Contrefort & Bilan"])
 
-   with tab1:
-            st.subheader("📊 Analyse de la Portance & Équilibre")
-            
-            # --- RAPPEL DES CHIFFRES CLÉS ---
-            res_a, res_b, res_c = st.columns(3)
-            res_a.metric("Pression Max (σ1)", f"{sig_max:.2f} kPa")
-            res_b.metric("Excentricité (e)", f"{excentricite:.3f} m")
-            
-            if sig_max > qadm:
-                res_c.error("❌ SOL INSUFFISANT")
-            elif sig2 < 0:
-                res_c.warning("⚠️ SOULÈVEMENT")
-            else:
-                res_c.success("✅ SOL OK")
-
-            # --- LE GRAPHIQUE EXPERT ---
-            fig2, ax2 = plt.subplots(figsize=(10, 5))
-            
-            # 1. Dessin de la pression au sol (Ligne bleue)
-            ax2.plot([0, L_totale], [sig1, sig2], 'b-', linewidth=3, label="Pression Sol (kPa)")
-            ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.1, color='blue')
-            
-            # 2. Ligne de la contrainte admissible (Rouge)
-            ax2.axhline(qadm, color='red', linestyle='--', label=f"Limite Sol ({qadm} kPa)")
-            
-            # 3. Marquage des Poteaux (Position réelle sur la semelle)
-            # On place les flèches un peu au-dessus de la valeur max pour la visibilité
-            y_offset = max(sig_max, qadm) * 0.1
-            for i, p_pos in enumerate(pos_x):
-                ax2.annotate('↓', (p_pos, -y_offset), ha='center', fontsize=20, color='black')
-                ax2.text(p_pos, -y_offset*2.5, f"P{i+1}", ha='center', fontweight='bold')
-
-            # 4. Ligne du Centre de Gravité des charges (Vert pointillé)
-            ax2.axvline(x_cg, color='green', linestyle=':', linewidth=2, label=f"Centre Gravité G ({x_cg:.2f}m)")
-            
-            # 5. Zone du Tiers Central (Zone de stabilité totale)
-            ax2.axvspan(L_totale/3, 2*L_totale/3, color='yellow', alpha=0.1, label="Tiers Central")
-
-            # Configuration esthétique
-            ax2.set_xlim(0, L_totale)
-            ax2.set_xlabel("Longueur de la semelle (m)")
-            ax2.set_ylabel("Pression (kPa)")
-            ax2.set_title("Répartition des contraintes sous la semelle", fontsize=12)
-            ax2.legend(loc='lower right', fontsize='small')
-            ax2.grid(True, linestyle='--', alpha=0.5)
-            
-            st.pyplot(fig2)
-
-            # --- DIAGNOSTIC RAPIDE ---
-            st.divider()
-            if abs(excentricite) < L_totale / 6:
-                st.info(f"💡 **Conseil** : Vos charges sont bien centrées. La semelle travaille de manière optimale.")
-            else:
-                st.warning(f"💡 **Conseil** : L'excentricité est importante. Vérifiez le ferraillage supérieur de la longrine.")
+    with tab1:
+        st.subheader("Vérification de la Stabilité")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Sigma Patin", f"{sig1_m:.2f} kPa")
+        c2.metric("Sigma Talon", f"{sig2_m:.2f} kPa")
+        c3.metric("Statut Sol", "✅ OK" if sig1_m <= sigma_sol_adm else "❌ EXCES")
+        fig, ax = plt.subplots(figsize=(10, 3))
+        ax.plot([0, B], [sig1_m, sig2_m], 'r-')
+        ax.fill_between([0, B], [sig1_m, sig2_m], color='red', alpha=0.1)
+        st.pyplot(fig)
 
     with tab2:
         st.subheader("Ferraillage du Rideau")
-        tranches, as_max_trouve, z, H_rideau = [], 0, 0.5, H - hs
-        while z <= H_rideau:
-            e_z = hr_haut + (hr_bas - hr_haut) * (z / H_rideau)
+        tranches, as_max_m, z, Hr = [], 0, 0.5, H - hs
+        while z <= Hr:
+            e_z = hr_haut + (hr_bas - hr_haut) * (z / Hr)
             p_z = ka * gamma_t * z
             m0 = (1.35 * p_z * e ** 2) / 8
-            As_t = (0.8 * m0 * 1e-3) / (0.9 * (e_z - 0.05) * fsu) * 1e4
-            as_max_trouve = max(as_max_trouve, As_t)
-            tranches.append({"Profondeur (m)": round(z, 2), "As (cm²/ml)": round(As_t, 2)})
+            As_z = (0.8 * m0 * 1e-3) / (0.9 * (e_z - 0.05) * fsu) * 1e4
+            as_max_m = max(as_max_m, As_z)
+            tranches.append({"Profondeur (m)": round(z, 2), "As (cm²/ml)": round(As_z, 2)})
             z += 1.0
         st.table(pd.DataFrame(tranches))
 
     with tab3:
-        st.subheader("Analyse du Contrefort")
-        H_cont_calc = H - hs
-        p_base = ka * gamma_t * H_cont_calc * e
-        Mu_cont = 1.35 * (p_base * H_cont_calc / 2) * (H_cont_calc / 3)
-        As_cont = (Mu_cont * 1e-3) / (0.9 * (L_cont - 0.10) * fsu) * 1e4
-        
-        st.metric("Acier Contrefort (As)", f"{As_cont:.2f} cm²")
-
-        # BILAN QUANTITATIF GLOBAL
-        vol_beton_ml = (W_rideau + W_semelle) / 25 + (H_cont_calc * L_cont / 2) * b0 / e
-        ratio_base = 110 if (as_max_trouve > 7 or As_cont > 30) else 80
-        poids_acier_ml = vol_beton_ml * ratio_base
-        vol_global = vol_beton_ml * L_totale
-        poids_acier_global = poids_acier_ml * L_totale
-
-        st.divider()
-        st.info(f"📍 Synthèse pour {L_totale}m de mur :")
-        g1, g2 = st.columns(2)
-        g1.metric("Béton Total", f"{vol_global:.2f} m³")
-        g2.metric("Acier Total", f"{poids_acier_global:.0f} kg")
-
-    # --- CALCULATEUR DE MATÉRIAUX (MÉTRÉ) ---
-    st.divider()
-    st.header("📊 Calculateur de Matériaux (Métré Rapide)")
-    volume_final = st.number_input("Volume total de béton à traiter (m³)", value=float(vol_global))
-    type_travaux = st.selectbox("Type de travaux", ["Béton (Dalle, Poteau, Poutre)", "Mortier Moellons", "Mortier Briques"])
-    
-    col_mat1, col_mat2 = st.columns(2)
-    dosage = col_mat1.selectbox("Dosage Ciment (kg/m³)", [250, 300, 350, 400], index=2)
-    poids_sac = col_mat2.number_input("Poids du sac (kg)", value=50)
-
-    if "Béton" in type_travaux:
-        v_sable, v_gravier = volume_final * (2/6), volume_final * (3/6)
-        masse_ciment = volume_final * dosage
-    else:
-        ratio_v = 0.30 if "Moellons" in type_travaux else 0.20
-        vol_mortier = volume_final * ratio_v
-        v_sable, v_gravier = vol_mortier * 0.9, 0
-        masse_ciment = vol_mortier * dosage
-
-    nb_sacs = masse_ciment / poids_sac
-    r_m1, r_m2, r_m3 = st.columns(3)
-    r_m1.metric("Ciment (Sacs)", f"{nb_sacs:.1f}")
-    r_m2.metric("Sable (m³)", f"{v_sable:.2f}")
-    if v_gravier > 0: r_m3.metric("Gravier (m³)", f"{v_gravier:.2f}")
-
-    with st.expander("💰 Enveloppe Budgétaire (Estimation)"):
-        prix_sac = st.number_input("Prix sac ciment (Ar)", value=38000)
-        prix_acier = st.number_input("Prix acier (Ar/kg)", value=5500)
-        total_c = nb_sacs * prix_sac
-        total_a = poids_acier_global * prix_acier
-        st.subheader(f"💵 TOTAL ESTIMÉ : {int(total_c + total_a):,} Ar".replace(",", " "))
+        st.subheader("Analyse du Contrefort & Bilan")
+        vol_m = (W_rideau + W_semelle) / 25 + ((H-hs) * L_cont / 2) * b0 / e
+        poids_a = vol_m * (110 if as_max_m > 7 else 80)
+        st.metric("Volume Béton Total", f"{vol_m * L_totale:.2f} m³")
+        st.metric("Poids Acier Total", f"{poids_a * L_totale:.0f} kg")
 
 elif menu == "📐 Semelle Filante":
     st.header("📐 Expertise : Semelle Filante + Longrine")
-    st.write("Ce module calcule la stabilité au sol et le pré-dimensionnement du ferraillage.")
-
-    # --- 1. SAISIE DES DONNÉES (SIDEBAR) ---
+    
     with st.sidebar:
-        st.header("⚙️ Paramètres Semelle")
-        nb_poteaux = st.number_input("Nombre de poteaux", min_value=2, value=3)
-        debord_ext = st.number_input("Débord aux extrémités (m)", value=0.20)
-        B_semelle = st.number_input("Largeur semelle B (m)", value=0.60)
-        h_semelle = st.number_input("Hauteur semelle h (m)", value=0.30)
-        a_poteau = st.number_input("Largeur poteau a (m)", value=0.20)
+        st.header("⚙️ Paramètres")
+        nb_p = st.number_input("Nombre de poteaux", min_value=2, value=3)
+        deb_e = st.number_input("Débord extrémités (m)", value=0.20)
+        B_s = st.number_input("Largeur semelle B (m)", value=0.60)
+        h_s = st.number_input("Hauteur semelle h (m)", value=0.30)
+        q_adm = st.number_input("Contrainte adm. sol (kPa)", value=200.0)
         
-        st.header("🌍 Sol & Matériaux")
-        qadm = st.number_input("Contrainte adm. sol (kPa)", value=200.0)
-        fyd = 500  # MPa
-        gamma_beton = 25.0
-        
-        st.header("🏗️ Charges Poteaux")
-        # Saisie dynamique des entraxes et charges
-        st.info("Saisissez les valeurs séparées par des espaces")
-        entraxe_str = st.text_input(f"Entraxes ({nb_poteaux-1} valeurs)", value="2.0 3.0")
-        G_str = st.text_input(f"Charges G en kN ({nb_poteaux} valeurs)", value="150 250 300")
-        Q_str = st.text_input(f"Charges Q en kN ({nb_poteaux} values)", value="20 20 20")
+        st.info("Séparez les valeurs par un espace")
+        ent_str = st.text_input("Entraxes (m)", value="2.0 3.0")
+        G_s = st.text_input("Charges G (kN)", value="150 250 300")
+        Q_s = st.text_input("Charges Q (kN)", value="20 20 20")
 
-        st.header("🧱 Longrine & Remblai")
-        B_longrine = st.number_input("Largeur longrine (m)", value=0.20)
-        h_longrine = st.number_input("Hauteur longrine (m)", value=0.45)
-        H_remblai = st.number_input("Hauteur remblai (m)", value=0.50)
-        gamma_rem = st.number_input("Poids vol. remblai (kN/m³)", value=18.0)
-
-    # --- 2. LOGIQUE DE CALCUL ---
     try:
-        # Conversion des chaines en listes
-        entraxes = [float(x) for x in entraxe_str.split()]
-        G_list = [float(x) for x in G_str.split()]
-        Q_list = [float(x) for x in Q_str.split()]
+        ents = [float(x) for x in ent_str.split()]
+        Gs = [float(x) for x in G_s.split()]
+        Qs = [float(x) for x in Q_s.split()]
 
-        if len(entraxes) != nb_poteaux - 1 or len(G_list) != nb_poteaux or len(Q_list) != nb_poteaux:
-            st.error("❌ Erreur : Le nombre de valeurs saisies ne correspond pas au nombre de poteaux.")
-        else:
-            # Géométrie
-            L_totale = sum(entraxes) + 2 * debord_ext
-            S_semelle = B_semelle * L_totale
-            
-            # Poids propres
-            P_semelle = B_semelle * h_semelle * L_totale * gamma_beton
-            P_longrine = B_longrine * h_longrine * L_totale * gamma_beton
-            l_debord_transv = (B_semelle - a_poteau) / 2
-            P_remblai = gamma_rem * H_remblai * l_debord_transv * 2 * L_totale
-            
-            N_total_ser = sum(G_list) + sum(Q_list) + P_semelle + P_longrine + P_remblai
-            
-            # Positions pour le calcul de l'excentricité
-            pos_x = [debord_ext]
-            for ex in entraxes:
-                pos_x.append(pos_x[-1] + ex)
-            
-            P_poteaux_total = [G_list[i] + Q_list[i] for i in range(nb_poteaux)]
-            x_cg = sum(P_poteaux_total[i] * pos_x[i] for i in range(nb_poteaux)) / sum(P_poteaux_total)
-            excentricite = (L_totale / 2) - x_cg
-            
-            # Contraintes au sol
-            sig1 = (N_total_ser / S_semelle) * (1 + 6 * excentricite / L_totale)
-            sig2 = (N_total_ser / S_semelle) * (1 - 6 * excentricite / L_totale)
-            sig_max = max(sig1, sig2)
+        L_t = sum(ents) + 2 * deb_e
+        S_s = B_s * L_t
+        P_s = B_s * h_s * L_t * 25.0
+        
+        N_ser = sum(Gs) + sum(Qs) + P_s
+        px = [deb_e]
+        for ex in ents: px.append(px[-1] + ex)
+        
+        xcg = sum((Gs[i]+Qs[i]) * px[i] for i in range(nb_p)) / sum(Gs[i]+Qs[i] for i in range(nb_p))
+        exc = (L_t / 2) - xcg
+        
+        s1 = (N_ser / S_s) * (1 + 6 * exc / L_t)
+        s2 = (N_ser / S_s) * (1 - 6 * exc / L_t)
 
-            # --- 3. AFFICHAGE DES RÉSULTATS ---
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Pression Max Sol", f"{sig_max:.2f} kPa")
-            col2.metric("Excentricité", f"{excentricite:.3f} m")
-            col3.metric("Statut Sol", "✅ OK" if sig_max <= qadm else "❌ EXCES")
+        t1, t2 = st.tabs(["📊 Stabilité Expert", "🏗️ Ferraillage"])
+        
+        with t1:
+            st.subheader("Analyse de Portance & Équilibre")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Pression Max", f"{max(s1, s2):.2f} kPa")
+            c2.metric("Excentricité", f"{exc:.3f} m")
+            c3.metric("Sol", "✅ OK" if max(s1, s2) <= q_adm else "❌ EXCES")
 
-            if sig_max > qadm:
-                st.warning(f"⚠️ La pression dépasse la capacité du sol ({qadm} kPa). Augmentez la largeur B.")
-
-            # Onglets pour le détail
-            t1, t2 = st.tabs(["📊 Analyse Stabilité", "🏗️ Ferraillage & Charges"])
+            fig2, ax2 = plt.subplots(figsize=(10, 5))
+            ax2.plot([0, L_t], [s1, s2], 'b-', linewidth=3, label="Pression Sol")
+            ax2.fill_between([0, L_t], [s1, s2], alpha=0.1, color='blue')
+            ax2.axhline(q_adm, color='red', linestyle='--', label="Limite Sol")
+            ax2.axvline(xcg, color='green', linestyle=':', label="G des charges")
+            ax2.axvspan(L_t/3, 2*L_t/3, color='yellow', alpha=0.1, label="Tiers Central")
             
-            with t1:
-                st.subheader("Répartition des pressions sur le sol")
-                fig2, ax2 = plt.subplots(figsize=(10, 4))
-                ax2.plot([0, L_totale], [sig1, sig2], 'b-o', label="Pression (kPa)")
-                ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.2, color='blue')
-                ax2.axhline(qadm, color='red', linestyle='--', label="Limite Sol")
-                ax2.set_xlabel("Longueur de la semelle (m)")
-                ax2.set_ylabel("Contrainte (kPa)")
-                ax2.legend()
-                st.pyplot(fig2)
-
-                st.write("**Détail des charges :**")
-                st.write(f"- Poids Semelle : {P_semelle:.2f} kN")
-                st.write(f"- Poids Longrine : {P_longrine:.2f} kN")
-                st.write(f"- Charge Poteaux (G+Q) : {sum(P_poteaux_total):.2f} kN")
-
-            with t2:
-                # Ferraillage transversal
-                q_remblai_dist = P_remblai / (2 * l_debord_transv * L_totale) if l_debord_transv > 0 else 0
-                M_transv = q_remblai_dist * (l_debord_transv**2) / 2
+            for i, p in enumerate(px):
+                ax2.annotate('↓', (p, max(s1, s2)*1.1), ha='center', fontsize=15)
+                ax2.text(p, max(s1, s2)*1.2, f"P{i+1}", ha='center')
                 
-                # Ferraillage
-                d_utile = h_semelle - 0.05
-                As_calc = (M_transv * 1e6) / (0.9 * d_utile * 1000 * fyd)
-                As_min = 0.0015 * B_semelle * 1000 * h_semelle * 1000 # mm²/ml
-                
-                st.subheader("Ferraillage Transversal (par ml)")
-                c_a, c_b = st.columns(2)
-                c_a.write(f"Moment en console : **{M_transv:.2f} kNm/ml**")
-                c_b.write(f"Section d'acier : **{max(As_calc, As_min):.1f} mm²/ml**")
-                
-                st.divider()
-                st.subheader("Charges pour calcul Longrine (ELU)")
-                q_G_longrine = (sum(G_list) + P_semelle + P_longrine) / L_totale
-                q_Q_longrine = sum(Q_list) / L_totale
-                st.success(f"Charge permanente G : **{q_G_longrine:.2f} kN/m**")
-                st.success(f"Charge exploitation Q : **{q_Q_longrine:.2f} kN/m**")
-                st.info("💡 Utilisez ces valeurs dans le module 'Poutre Continue' pour ferrailler la longrine.")
+            ax2.set_xlabel("Longueur (m)")
+            ax2.set_ylabel("kPa")
+            ax2.legend()
+            st.pyplot(fig2)
 
-    except Exception as e:
-        st.error(f"Saisie incomplète ou erronée : {e}")
+        with t2:
+            st.write("Charges pour Longrine (ELU) :")
+            st.success(f"G linéaire : {(sum(Gs)+P_s)/L_t:.2f} kN/m")
+            st.success(f"Q linéaire : {sum(Qs)/L_t:.2f} kN/m")
+
+    except Exception as err:
+        st.error(f"Vérifiez vos saisies : {err}")
 
 elif menu == "🌉 Poutre Continue":
-    st.header("🌉 Calcul de Poutre Continue")
-    st
+    st.header("🌉 Calcul de Poutre Continue (Longrine)")
+    st.info("Prêt pour l'intégration de la méthode de Caquot.")

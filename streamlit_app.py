@@ -59,7 +59,7 @@ elif menu == "🧱 Mur à Contreforts":
         st.header("3. Paramètres Chantier")
         L_totale_mur = st.number_input("Longueur totale du mur (m)", value=10.0, step=1.0)
 
-    # Moteur de calcul Mur
+    # --- MOTEUR DE CALCUL ---
     phi_rad = math.radians(phi_deg)
     ka = (math.tan(math.radians(45) - phi_rad / 2)) ** 2
     gamma_b, fsu = 25.0, 400 / 1.15
@@ -109,25 +109,27 @@ elif menu == "🧱 Mur à Contreforts":
         st.pyplot(fig)
 
     with tab2:
-        st.subheader("Ferraillage du Rideau")
+        st.subheader("Ferraillage du Rideau (Dalle entre contreforts)")
         tranches, as_max_trouve, z, H_rideau = [], 0, 0.5, H - hs
         while z <= H_rideau:
             e_z = hr_haut + (hr_bas - hr_haut) * (z / H_rideau)
             p_z = ka * gamma_t * z
-            m0 = (1.35 * p_z * e ** 2) / 8
+            m0 = (1.35 * p_z * e ** 2) / 8 # Moment en travée dalle
             As_t = (0.8 * m0 * 1e-3) / (0.9 * (e_z - 0.05) * fsu) * 1e4
             as_max_trouve = max(as_max_trouve, As_t)
             tranches.append({"Profondeur (m)": round(z, 2), "As (cm²/ml)": round(As_t, 2)})
             z += 1.0
         st.table(pd.DataFrame(tranches))
+        
+        st.info(f"💡 **Conseil Optimisation** : L'entraxe actuel est de {e}m. En le réduisant à {round(e*0.8, 2)}m, vous pourriez diminuer la section d'acier du rideau d'environ 30%.")
 
     with tab3:
-        st.subheader("Analyse du Contrefort")
+        st.subheader("Analyse du Contrefort & Quantités")
         H_cont_calc = H - hs
         p_base = ka * gamma_t * H_cont_calc * e
         Mu_cont = 1.35 * (p_base * H_cont_calc / 2) * (H_cont_calc / 3)
         As_cont = (Mu_cont * 1e-3) / (0.9 * (L_cont - 0.10) * fsu) * 1e4
-        st.metric("Acier Contrefort (As)", f"{As_cont:.2f} cm²")
+        st.metric("Acier Contrefort (As principal)", f"{As_cont:.2f} cm²")
 
         vol_beton_ml = (W_rideau + W_semelle) / 25 + (H_cont_calc * L_cont / 2) * b0 / e
         ratio_base = 110 if (as_max_trouve > 7 or As_cont > 30) else 80
@@ -140,6 +142,26 @@ elif menu == "🧱 Mur à Contreforts":
         g1, g2 = st.columns(2)
         g1.metric("Béton Total", f"{vol_global:.2f} m³")
         g2.metric("Acier Total", f"{poids_acier_global:.0f} kg")
+
+    # --- CALCULATEUR DE MATÉRIAUX & BUDGET ---
+    st.divider()
+    st.header("📊 Métré & Enveloppe Budgétaire")
+    c1, c2 = st.columns(2)
+    prix_sac = c1.number_input("Prix sac ciment (Ar)", value=38000)
+    prix_acier = c2.number_input("Prix acier (Ar/kg)", value=5500)
+
+    # Calcul sacs (dosage 350kg/m3 par défaut)
+    nb_sacs = (vol_global * 350) / 50
+    total_ciment = nb_sacs * prix_sac
+    total_acier = poids_acier_global * prix_acier
+    total_general = total_ciment + total_acier
+
+    st.success(f"💰 **Total Estimé (Ciment + Acier) : {int(total_general):,} Ar**".replace(",", " "))
+    
+    with st.expander("🔍 Détails du budget"):
+        st.write(f"- Ciment ({int(nb_sacs)} sacs) : {int(total_ciment):,} Ar")
+        st.write(f"- Acier ({int(poids_acier_global)} kg) : {int(total_acier):,} Ar")
+        st.caption("Note: Les prix du sable et gravier ne sont pas inclus ici.")
 
 elif menu == "📐 Semelle Filante":
     st.header("📐 Expertise : Semelle Filante + Longrine")
@@ -168,18 +190,18 @@ elif menu == "📐 Semelle Filante":
         Q_list = [float(x) for x in Q_str.split()]
 
         if len(entraxes) != nb_poteaux - 1 or len(G_list) != nb_poteaux or len(Q_list) != nb_poteaux:
-            st.error("❌ Erreur de saisie des charges.")
+            st.error("❌ Erreur : Nombre de valeurs incorrect.")
         else:
             L_totale = sum(entraxes) + 2 * debord_ext
             S_semelle = B_semelle * L_totale
             P_semelle = B_semelle * h_semelle * L_totale * gamma_beton
-            P_longrine = 0.2 * 0.45 * L_totale * gamma_beton # Simplifié
             
-            N_total_ser = sum(G_list) + sum(Q_list) + P_semelle + P_longrine
+            N_total_ser = sum(G_list) + sum(Q_list) + P_semelle
             pos_x = [debord_ext]
             for ex in entraxes: pos_x.append(pos_x[-1] + ex)
             
             P_poteaux_total = [G_list[i] + Q_list[i] for i in range(nb_poteaux)]
+            # --- CALCUL DU CENTRE DE GRAVITE DES CHARGES ---
             x_cg = sum(P_poteaux_total[i] * pos_x[i] for i in range(nb_poteaux)) / sum(P_poteaux_total)
             excentricite = (L_totale / 2) - x_cg
             
@@ -193,28 +215,27 @@ elif menu == "📐 Semelle Filante":
                 st.subheader("📊 Analyse de la Portance & Équilibre")
                 res_a, res_b, res_c = st.columns(3)
                 res_a.metric("Pression Max", f"{sig_max:.2f} kPa")
-                res_b.metric("Excentricité", f"{excentricite:.3f} m")
+                res_b.metric("Position G (depuis gauche)", f"{x_cg:.2f} m")
                 if sig_max > qadm: res_c.error("❌ SOL INSUFFISANT")
-                elif sig2 < 0: res_c.warning("⚠️ SOULÈVEMENT")
                 else: res_c.success("✅ SOL OK")
 
                 fig2, ax2 = plt.subplots(figsize=(10, 5))
-                ax2.plot([0, L_totale], [sig1, sig2], 'b-', linewidth=3, label="Pression (kPa)")
+                ax2.plot([0, L_totale], [sig1, sig2], 'b-', linewidth=3, label="Répartition Pression")
                 ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.1, color='blue')
                 ax2.axhline(qadm, color='red', linestyle='--', label=f"Limite Sol ({qadm})")
                 
-                y_off = sig_max * 0.1
+                # Marquage CG et Poteaux
+                ax2.axvline(x_cg, color='green', linestyle=':', label=f"Centre Gravité ({x_cg:.2f}m)")
                 for i, p_pos in enumerate(pos_x):
-                    ax2.annotate('↓', (p_pos, -y_off), ha='center', fontsize=20)
-                    ax2.text(p_pos, -y_off*2.5, f"P{i+1}", ha='center', fontweight='bold')
+                    ax2.annotate(f'P{i+1}', (p_pos, sig_max*0.1), ha='center', fontweight='bold')
                 
-                ax2.axvline(x_cg, color='green', linestyle=':', label="Centre Gravité")
-                ax2.axvspan(L_totale/3, 2*L_totale/3, color='yellow', alpha=0.1, label="Tiers Central")
+                ax2.set_xlabel("Longueur (m)")
+                ax2.set_ylabel("Pression (kPa)")
                 ax2.legend()
                 st.pyplot(fig2)
 
     except Exception as e:
-        st.error(f"Erreur : {e}")
+        st.error(f"Erreur de saisie : {e}")
 
 elif menu == "🌉 Poutre Continue":
     st.header("🌉 Calcul de Poutre Continue")

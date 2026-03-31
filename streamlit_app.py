@@ -41,8 +41,8 @@ if menu == "🏠 Accueil":
     # Petit message pour le patron s'il passe par là
     st.success("Logiciel optimisé pour les chantiers à Madagascar 🇲🇬")
 
-# --- MODULE MUR À CONTREFORTS ---
-elif menu == "🧱 Mur à Contreforts":
+ # --- MODULE MUR À CONTREFORTS ---
+ elif menu == "🧱 Mur à Contreforts":
     st.header("🧱 Expertise : Mur à Contreforts (BAEL)")
     
 
@@ -52,8 +52,8 @@ st.set_page_config(page_title="Expert Mur Contreforts", layout="wide")
 st.title("🏗️ Logiciel d'Expertise : Mur à Contreforts (BAEL)")
 st.write("Calcul complet : Stabilité, Rideau par tranches, Semelle et Contreforts.")
 
-# --- BARRE LATÉRALE : SAISIE DES DONNÉES ---
-with st.sidebar:
+ # --- BARRE LATÉRALE : SAISIE DES DONNÉES ---
+ with st.sidebar:
     st.header("1. Paramètres Sol & Béton")
     gamma_t = st.number_input("Poids volumique terre (kN/m3)", value=16.0)
     phi_deg = st.slider("Angle de frottement φ (°)", 20, 45, 35)
@@ -139,7 +139,7 @@ sigma_2 = (V_elu / B) * (1 - 6 * e_finale / B)
 # --- AFFICHAGE ---
 tab1, tab2, tab3 = st.tabs(["📊 Stabilité", "🧱 Rideau", "📐 Contrefort & Bilan"])
 
-with tab1:
+ with tab1:
     st.subheader("Vérification de la Stabilité")
     c1, c2, c3 = st.columns(3)
     c1.metric("Sigma Patin", f"{sigma_1:.2f} kPa")
@@ -154,14 +154,14 @@ with tab1:
     ax.set_ylabel("Pression (kPa)")
     st.pyplot(fig)
 
-with tab2:
+ with tab2:
     st.subheader("Ferraillage du Rideau")
 
 
-    def verifier_densite(as_calc):
-        if as_calc > 10: return "❌ TROP DENSE"
-        if as_calc > 7: return "⚠️ ÉLEVÉ"
-        return "✅ OK"
+     def verifier_densite(as_calc):
+         if as_calc > 10: return "❌ TROP DENSE"
+         if as_calc > 7: return "⚠️ ÉLEVÉ"
+         return "✅ OK"
 
 
     tranches = []
@@ -184,7 +184,7 @@ with tab2:
         })
         z += 1.0
 
-    if as_max_trouve > 7:
+     if as_max_trouve > 7:
         st.warning(
             f"💡 **Conseil** : Ferraillage élevé ({as_max_trouve:.2f} cm²). Réduisez l'entraxe ({e}m) pour économiser de l'acier.")
 
@@ -306,12 +306,12 @@ with st.expander("💰 Enveloppe Budgétaire (Estimation)"):
     # (Attention à bien garder l'indentation vers la droite pour que ce soit sous le 'elif')
     st.warning("⚠️ Recolle ici ton code du mur pour le réactiver.")
 
-# --- MODULE SEMELLE FILANTE ---
-elif menu == "📐 Semelle Filante":
+ # --- MODULE SEMELLE FILANTE ---
+ elif menu == "📐 Semelle Filante":
     st.header("📐 Expertise : Semelle Filante + Longrine")
     st.info("🚧 Ce module est en cours d'intégration. On va transformer ton script Python en interface Web ici.")
 
-# --- MODULE POUTRE CONTINUE ---
-elif menu == "🌉 Poutre Continue":
+ # --- MODULE POUTRE CONTINUE ---
+ elif menu == "🌉 Poutre Continue":
     st.header("🌉 Calcul de Poutre Continue (Expert)")
     st.warning("⚠️ Module en cours d'optimisation : Intégration des charges ponctuelles et du ferraillage.")

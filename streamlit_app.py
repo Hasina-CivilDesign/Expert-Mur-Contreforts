@@ -305,11 +305,11 @@ with st.expander("💰 Enveloppe Budgétaire (Estimation)"):
     st.warning("⚠️ Recolle ici ton code du mur pour le réactiver.")
 
  # --- MODULE SEMELLE FILANTE ---
- elif menu == "📐 Semelle Filante":
+elif menu == "📐 Semelle Filante":
     st.header("📐 Expertise : Semelle Filante + Longrine")
     st.info("🚧 Ce module est en cours d'intégration. On va transformer ton script Python en interface Web ici.")
 
  # --- MODULE POUTRE CONTINUE ---
- elif menu == "🌉 Poutre Continue":
+elif menu == "🌉 Poutre Continue":
     st.header("🌉 Calcul de Poutre Continue (Expert)")
     st.warning("⚠️ Module en cours d'optimisation : Intégration des charges ponctuelles et du ferraillage.")

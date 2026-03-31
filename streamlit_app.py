@@ -42,7 +42,7 @@ if menu == "🏠 Accueil":
     st.success("Logiciel optimisé pour les chantiers à Madagascar 🇲🇬")
 
  # --- MODULE MUR À CONTREFORTS ---
-    elif menu == "🧱 Mur à Contreforts":
+elif menu == "🧱 Mur à Contreforts":
         st.header("🧱 Expertise : Mur à Contreforts (BAEL)")
         
     

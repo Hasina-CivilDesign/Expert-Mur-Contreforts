@@ -52,89 +52,126 @@ elif menu == "🧱 Mur à Contreforts":
 # --- MODULE SEMELLE FILANTE ---
 # --- MODULE SEMELLE FILANTE (VERSION VARIABLE) ---
 elif menu == "📐 Semelle Filante":
-    st.header("📐 Expertise : Semelle Filante Multi-Poteaux")
+    st.header("📐 Expertise : Semelle Filante + Longrine (BAEL)")
 
+    # --- 1. SAISIE DES DONNÉES (Barre latérale) ---
     with st.sidebar:
-        st.subheader("Paramètres de la Semelle")
-        B_sem = st.number_input("Largeur semelle B (m)", value=0.60, step=0.05)
-        h_sem = st.number_input("Hauteur semelle h (m)", value=0.30, step=0.05)
-        q_adm = st.number_input("Contrainte sol admissible (kPa)", value=200.0)
+        st.subheader("🏗️ Géométrie & Sol")
+        B_sem = st.number_input("Largeur semelle B (m)", value=0.50, step=0.05)
+        h_sem = st.number_input("Hauteur semelle h (m)", value=0.25, step=0.05)
+        a_pot = st.number_input("Largeur poteau a (m)", value=0.20)
+        debord_ext = st.number_input("Débord aux extrémités (m)", value=0.20)
+        q_adm = st.number_input("Contrainte admissible sol (kPa/kN/m²)", value=250.0)
         
-        st.divider()
-        st.subheader("Configuration des Poteaux")
-        # Saisie des distances entre poteaux (ex: 3.5 4.2 3.8)
-        txt_entraxes = st.text_input("Entraxes entre poteaux (m)", value="3.5 4.0")
-        # Saisie des charges G par poteau
-        txt_G = st.text_input("Charges G par poteau (kN)", value="120 150 120")
-        # Saisie des charges Q par poteau
-        txt_Q = st.text_input("Charges Q par poteau (kN)", value="40 50 40")
+        st.subheader("🌱 Remblai sur débords")
+        h_remblai = st.number_input("Hauteur du remblai (m)", value=0.60, step=0.10)
+        gamma_remblai = st.number_input("Poids vol. remblai (kN/m³)", value=18.0)
 
-    # --- LOGIQUE DE CALCUL DYNAMIQUE ---
+        st.subheader("🎯 Charges & Entraxes")
+        txt_L = st.text_input("Entraxes entre poteaux (m)", value="2.0 3.0")
+        txt_G = st.text_input("Charges G par poteau (kN)", value="150 250 300")
+        txt_Q = st.text_input("Charges Q par poteau (kN)", value="20 20 20")
+
+    # --- 2. LE MOTEUR DE CALCUL ---
     try:
-        # Conversion des textes en listes de nombres
-        list_L = [float(x) for x in txt_entraxes.split()]
-        list_G = [float(x) for x in txt_G.split()]
-        list_Q = [float(x) for x in txt_Q.split()]
+        # Conversion des listes
+        L_list = [float(x) for x in txt_L.split()]
+        G_list = [float(x) for x in txt_G.split()]
+        Q_list = [float(x) for x in txt_Q.split()]
+        
+        # Longueur et Surface
+        L_tot = sum(L_list) + 2 * debord_ext
+        Surface = B_sem * L_tot
+        
+        # Poids propres et Remblai
+        P_semelle = B_sem * h_sem * L_tot * 25
+        l_debord_transv = (B_sem - a_pot) / 2
+        P_remblai = gamma_remblai * h_remblai * l_debord_transv * 2 * L_tot
+        
+        N_total_ser = sum(G_list) + sum(Q_list) + P_semelle + P_remblai
+        
+        # Calcul de l'Excentricité (Centre de Gravité)
+        positions = [debord_ext]
+        for d_in in L_list:
+            positions.append(positions[-1] + d_in)
+        
+        P_poteaux = [G_list[i] + Q_list[i] for i in range(len(G_list))]
+        x_cg = sum(P_poteaux[i] * positions[i] for i in range(len(G_list))) / sum(P_poteaux)
+        e = (L_tot / 2) - x_cg
+        
+        # Contraintes aux bords (Formule de Navier)
+        sigma1 = (N_total_ser / Surface) * (1 + 6 * e / L_tot)
+        sigma2 = (N_total_ser / Surface) * (1 - 6 * e / L_tot)
 
-        # Vérification de la cohérence (Nb poteaux = Nb entraxes + 1)
-        if len(list_G) != len(list_L) + 1:
-            st.error("⚠️ Le nombre de charges G doit être égal au (nombre d'entraxes + 1)")
-        else:
-            L_totale_calc = sum(list_L)
-            G_total = sum(list_G)
-            Q_total = sum(list_Q)
-            
-            poids_propre_sem = B_sem * h_sem * L_totale_calc * 25
-            N_total_ser = G_total + Q_total + poids_propre_sem
-            
-            sigma_sol_calc = N_total_ser / (B_sem * L_totale_calc)
+        # --- 3. AFFICHAGE DU SCHÉMA DE PRESSION (Avant les onglets) ---
+        st.subheader("📈 Diagramme des pressions (ELS)")
+        fig, ax = plt.subplots(figsize=(10, 4))
+        
+        # Dessin de la semelle (gris)
+        ax.add_patch(plt.Rectangle((0, 0), L_tot, 0.4, color='grey', alpha=0.3, label="Semelle"))
+        
+        # Dessin du diagramme de pression (orange)
+        # On normalise sigma par rapport à q_adm pour que le dessin reste dans le cadre
+        y1 = -sigma1 / q_adm
+        y2 = -sigma2 / q_adm
+        x_press = [0, L_tot, L_tot, 0]
+        y_press = [0, 0, y2, y1]
+        ax.fill(x_press, y_press, color='orange', alpha=0.2, label="Pression Sol")
+        ax.plot(x_press, y_press, color='orange', lw=2)
 
-            # --- AFFICHAGE DES RÉSULTATS ---
-            st.subheader("Résultats du calcul réel")
+        # Ligne de limite q_adm (y = -1 car sigma/q_adm = 1)
+        ax.axhline(-1, color='red', linestyle='--', label="Limite q_adm")
+
+        # Flèches des poteaux (noires)
+        for i, pos_x in enumerate(positions):
+            ax.annotate(f"P{i+1}\n{P_poteaux[i]}kN", xy=(pos_x, 0.4), xytext=(pos_x, 1.2),
+                         ha='center', arrowprops=dict(facecolor='black', shrink=0.05, width=1))
+
+        ax.set_ylim(-1.5, 1.8)
+        ax.axis('off')
+        ax.legend(loc='upper right', fontsize='small')
+        st.pyplot(fig)
+
+        # --- 4. AFFICHAGE DES RÉSULTATS DÉTAILLÉS (Onglets) ---
+        tab1, tab2, tab3 = st.tabs(["📊 Stabilité & Sol", "🦾 Ferraillage", "📝 Métré Longrine"])
+
+        with tab1:
+            st.subheader("Vérification de la portance")
             c1, c2, c3 = st.columns(3)
-            c1.metric("Longueur Totale", f"{L_totale_calc:.2f} m")
-            c2.metric("Charge Totale G+Q", f"{G_total + Q_total:.1f} kN")
-            c3.metric("Pression Sol", f"{sigma_sol_calc:.2f} kPa")
+            c1.metric("Poids Remblai", f"{P_remblai:.1f} kN")
+            c2.metric("σ1 (Max)", f"{sigma1:.2f} kPa")
+            c3.metric("σ2 (Min)", f"{sigma2:.2f} kPa")
 
-            if sigma_sol_calc <= q_adm:
-                st.success("✅ La semelle est stable sur toute sa longueur.")
+            if sigma1 > q_adm:
+                st.error(f"❌ SOL INSUFFISANT : {sigma1:.2f} > {q_adm} kPa")
+            elif sigma2 < 0:
+                st.warning(f"⚠️ Soulèvement détecté (σ2 = {sigma2:.2f} < 0)")
             else:
-                st.error("❌ Risque de poinçonnement ou tassement. Augmentez la largeur B.")
+                st.success("✅ Portance du sol validée !")
 
-            # --- SCHÉMA DE LA SEMELLE ---
-            st.write("**Schéma de répartition des charges :**")
-            fig3, ax3 = plt.subplots(figsize=(10, 2))
-            # Dessin de la semelle
-            ax3.add_patch(plt.Rectangle((0, 0), L_totale_calc, 0.3, color='lightgrey'))
-            # Dessin des poteaux (flèches)
-            current_x = 0
-            ax3.annotate(f"P1\n{list_G[0]}kN", (0, 0.3), xytext=(0, 0.8), arrowprops=dict(arrowstyle='->'))
-            # --- SCHÉMA DE LA SEMELLE CORRIGÉ ---
-            st.write("**Schéma de répartition des charges (Coupe longitudinale) :**")
-            fig3, ax3 = plt.subplots(figsize=(10, 3))
+        with tab2:
+            st.subheader("Ferraillage Transversal (Console)")
+            M_trans = (sigma1 * l_debord_transv**2) / 2
+            st.write(f"Moment transversal max : **{M_trans:.2f} kN.m/m**")
             
-            # Dessin de la semelle (le béton)
-            ax3.add_patch(plt.Rectangle((0, 0), L_totale_calc, 0.3, color='lightgrey', label="Béton"))
+            d = h_sem - 0.05
+            As = (M_trans * 10**6) / (0.9 * d * 1000 * 435)
+            As_min = 0.0015 * 1000 * h_sem * 1000
             
-            # Dessin des poteaux (Flèches verticales)
-            current_x = 0
-            positions_x = [0] + [sum(list_L[:i+1]) for i in range(len(list_L))]
-            
-            for i, x_pos in enumerate(positions_x):
-                # On dessine une flèche verticale parfaite
-                ax3.annotate('', xy=(x_pos, 0.3), xytext=(x_pos, 1.2),
-                             arrowprops=dict(facecolor='red', shrink=0.05, width=2, headwidth=8))
-                # Texte de la charge au-dessus
-                ax3.text(x_pos, 1.3, f"P{i+1}\n{list_G[i]+list_Q[i]}kN", 
-                         ha='center', va='bottom', fontweight='bold', color='red')
+            st.info(f"Section calculée : {As:.1f} mm²/m")
+            st.info(f"Section minimale : {As_min:.1f} mm²/m")
+            st.success(f"➡️ Retenir : **{max(As, As_min):.1f} mm²/m**")
 
-            ax3.set_xlim(-0.5, L_totale_calc + 0.5)
-            ax3.set_ylim(-0.2, 2.0)
-            ax3.axis('off') # On cache les axes pour un look "Plan d'ingénieur"
-            st.pyplot(fig3)
+        with tab3:
+            st.subheader("Préparation pour la Poutre Continue")
+            q_G_longrine = (sum(G_list) + P_semelle + P_remblai) / L_tot
+            q_Q_longrine = sum(Q_list) / L_tot
+            st.code(f"Charge G : {q_G_longrine:.2f} kN/m")
+            st.code(f"Charge Q : {q_Q_longrine:.2f} kN/m")
+            st.write("💡 *Utilisez ces valeurs comme charges réparties dans le module Poutre.*")
 
-    except ValueError:
-        st.warning("Veuillez entrer des chiffres valides séparés par des espaces.")
+    except Exception as err:
+        st.error(f"Erreur : {err}. Vérifiez que le nombre de charges correspond au nombre d'appuis.")
 
 # --- MODULE POUTRE CONTINUE ---
 elif menu == "🌉 Poutre Continue":

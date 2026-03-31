@@ -187,7 +187,7 @@ if as_max_trouve > 7:
         st.warning(
             f"💡 **Conseil** : Ferraillage élevé ({as_max_trouve:.2f} cm²). Réduisez l'entraxe ({e}m) pour économiser de l'acier.")
 
-    st.table(pd.DataFrame(tranches))
+st.table(pd.DataFrame(tranches))
 
 with tab3:
     st.subheader("Analyse du Contrefort")

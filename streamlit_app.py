@@ -210,7 +210,7 @@ if As_cont > 40:
 
     # --- AJOUT DU BILAN QUANTITATIF FINAL ---
 st.divider()
-    st.subheader("📈 Bilan Quantitatif Global (au mètre linéaire)")
+st.subheader("📈 Bilan Quantitatif Global (au mètre linéaire)")
 
     # Calcul du volume de béton (Rideau + Semelle + Contreforts répartis sur l'entraxe)
     vol_beton_ml = (W_rideau + W_semelle) / 25 + (H_cont_calc * L_cont / 2) * b0 / e

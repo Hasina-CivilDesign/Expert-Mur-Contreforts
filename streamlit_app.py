@@ -418,9 +418,42 @@ elif menu == "🌉 Poutre Continue":
         st.success(f"✅ **CONFORME** : {section_fournie:.2f} cm² > {as_estime:.2f} cm²")
     else:
         st.error(f"❌ **INSUFFISANT** : Il manque {(as_estime - section_fournie):.2f} cm²")
+# --- 7. LE FERRAILLAGE TRANSVERSAL (CADRES) ---
+    st.divider()
+    st.subheader("⛓️ Dimensionnement des Cadres (Effort Tranchant)")
+    
+    # Récupération du Vmax sur toutes les travées
+    v_max_global = max([d['V. Max'] for d in data_res])
+    
+    col_c1, col_c2 = st.columns(2)
+    
+    with col_c1:
+        phi_t = st.selectbox("Diamètre des cadres (mm)", [6, 8, 10], index=0)
+        n_brins = st.number_input("Nombre de brins (vertical)", min_value=2, max_value=4, value=2)
+        
+        # Section totale At pour un cadre (ex: 2 brins de 6mm)
+        section_at = n_brins * (np.pi * (phi_t/20)**2) # en cm²
+        st.write(f"Section d'un cadre ($A_t$) : **{section_at:.2f} cm²**")
 
-    # --- LE FERRAILLAGE TRANSVERSAL (CADRES) ---
-    st.subheader("⛓️ Armatures Transversales (Cadres)")
-    phi_t = st.selectbox("Diamètre cadres", [6, 8], index=0)
-    st.write(f"Espacement maximum conseillé près des appuis : **15 cm**")
-    st.caption("Le détail des espacements (Loi de Caquot) est inclus dans la note de calcul exportée.")
+    # Calcul de la contrainte de cisaillement tau_u = V / (b*d)
+    d_utile = h_poutre - 0.05
+    tau_u = (v_max_global * 1e-3) / (b_poutre * d_utile) # Résultat en MPa (MN/m²)
+    
+    # Limite béton (BAEL) : min(0.20*fc28/gamma_b , 5MPa) -> On simplifie à 3.33 MPa pour un B25
+    tau_lim = 3.33 
+
+    with col_c2:
+        if tau_u > tau_lim:
+            st.error(f"⚠️ Cisaillement trop élevé : {tau_u:.2f} MPa > {tau_lim} MPa. Augmentez la section de béton !")
+        else:
+            st.metric("Contrainte de cisaillement", f"{tau_u:.2f} MPa")
+            
+        # Calcul de l'espacement max théorique St (Simplification BAEL)
+        # St <= (At * fe) / (0.4 * b)
+        st_theo = (section_at * 400) / (b_poutre * 100 * 0.4) 
+        # Limite réglementaire St <= min(0.9d, 40cm)
+        st_regle = min(st_theo, d_utile * 100 * 0.9, 40)
+        
+        st.metric("Espacement conseillé ($S_t$)", f"{int(st_regle)} cm")
+
+    st.info(f"📌 **Note de chantier :** Prévoyez un premier cadre à **{int(st_regle/2)} cm** de l'appui, puis respectez l'espacement de **{int(st_regle)} cm** en zone courante.")

@@ -35,6 +35,33 @@ with st.sidebar:
     # C'EST ICI LA NOUVEAUTÉ
     L_totale = st.number_input("Longueur totale du mur (m)", value=10.0, step=1.0, help="Utilisé pour le calcul global des matériaux.")
 
+    # --- SECTION SOUTIEN & CONTACT (LE TON JAUNE) ---
+    st.markdown("---")
+    st.write("🏗️ **Expertise & Soutien**")
+    
+    # Message d'information bleu
+    st.info("Outil conçu pour l'optimisation des chantiers à Madagascar.")
+
+    # Ton lien Buy Me a Coffee (Bouton Jaune)
+    # Tu peux changer l'URL si tu en as une autre
+    mon_lien_bmc = "https://www.buymeacoffee.com/hasina.civil"
+
+    st.markdown(f'''
+    <a href="{mon_lien_bmc}" target="_blank">
+        <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" 
+        alt="Soutenir mon travail" 
+        style="height: 45px !important; width: 160px !important; border-radius: 8px;" >
+    </a>
+    ''', unsafe_allow_html=True)
+
+    st.write("") # Petit espace pour respirer
+    
+    # Ton Email de contact
+    st.markdown("✉️ **Contact :**")
+    st.code("hasinarabialahy@gmail.com")
+    
+    st.caption("© 2026 - Développé par Hasina")
+
 # --- MOTEUR DE CALCUL ---
 phi_rad = math.radians(phi_deg)
 ka = (math.tan(math.radians(45) - phi_rad / 2)) ** 2

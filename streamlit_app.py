@@ -139,7 +139,7 @@ sigma_2 = (V_elu / B) * (1 - 6 * e_finale / B)
 # --- AFFICHAGE ---
 tab1, tab2, tab3 = st.tabs(["📊 Stabilité", "🧱 Rideau", "📐 Contrefort & Bilan"])
 
- with tab1:
+with tab1:
     st.subheader("Vérification de la Stabilité")
     c1, c2, c3 = st.columns(3)
     c1.metric("Sigma Patin", f"{sigma_1:.2f} kPa")

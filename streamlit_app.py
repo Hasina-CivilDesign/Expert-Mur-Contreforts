@@ -167,8 +167,125 @@ elif menu == "🧱 Mur à Contreforts":
         st.subheader(f"💵 TOTAL ESTIMÉ : {int(total_c + total_a):,} Ar".replace(",", " "))
 
 elif menu == "📐 Semelle Filante":
-    st.header("📐 Expertise : Semelle Filante")
-    st.info("Module en cours d'intégration.")
+    st.header("📐 Expertise : Semelle Filante + Longrine")
+    st.write("Ce module calcule la stabilité au sol et le pré-dimensionnement du ferraillage.")
+
+    # --- 1. SAISIE DES DONNÉES (SIDEBAR) ---
+    with st.sidebar:
+        st.header("⚙️ Paramètres Semelle")
+        nb_poteaux = st.number_input("Nombre de poteaux", min_value=2, value=3)
+        debord_ext = st.number_input("Débord aux extrémités (m)", value=0.20)
+        B_semelle = st.number_input("Largeur semelle B (m)", value=0.60)
+        h_semelle = st.number_input("Hauteur semelle h (m)", value=0.30)
+        a_poteau = st.number_input("Largeur poteau a (m)", value=0.20)
+        
+        st.header("🌍 Sol & Matériaux")
+        qadm = st.number_input("Contrainte adm. sol (kPa)", value=200.0)
+        fyd = 500  # MPa
+        gamma_beton = 25.0
+        
+        st.header("🏗️ Charges Poteaux")
+        # Saisie dynamique des entraxes et charges
+        st.info("Saisissez les valeurs séparées par des espaces")
+        entraxe_str = st.text_input(f"Entraxes ({nb_poteaux-1} valeurs)", value="2.0 3.0")
+        G_str = st.text_input(f"Charges G en kN ({nb_poteaux} valeurs)", value="150 250 300")
+        Q_str = st.text_input(f"Charges Q en kN ({nb_poteaux} values)", value="20 20 20")
+
+        st.header("🧱 Longrine & Remblai")
+        B_longrine = st.number_input("Largeur longrine (m)", value=0.20)
+        h_longrine = st.number_input("Hauteur longrine (m)", value=0.45)
+        H_remblai = st.number_input("Hauteur remblai (m)", value=0.50)
+        gamma_rem = st.number_input("Poids vol. remblai (kN/m³)", value=18.0)
+
+    # --- 2. LOGIQUE DE CALCUL ---
+    try:
+        # Conversion des chaines en listes
+        entraxes = [float(x) for x in entraxe_str.split()]
+        G_list = [float(x) for x in G_str.split()]
+        Q_list = [float(x) for x in Q_str.split()]
+
+        if len(entraxes) != nb_poteaux - 1 or len(G_list) != nb_poteaux or len(Q_list) != nb_poteaux:
+            st.error("❌ Erreur : Le nombre de valeurs saisies ne correspond pas au nombre de poteaux.")
+        else:
+            # Géométrie
+            L_totale = sum(entraxes) + 2 * debord_ext
+            S_semelle = B_semelle * L_totale
+            
+            # Poids propres
+            P_semelle = B_semelle * h_semelle * L_totale * gamma_beton
+            P_longrine = B_longrine * h_longrine * L_totale * gamma_beton
+            l_debord_transv = (B_semelle - a_poteau) / 2
+            P_remblai = gamma_rem * H_remblai * l_debord_transv * 2 * L_totale
+            
+            N_total_ser = sum(G_list) + sum(Q_list) + P_semelle + P_longrine + P_remblai
+            
+            # Positions pour le calcul de l'excentricité
+            pos_x = [debord_ext]
+            for ex in entraxes:
+                pos_x.append(pos_x[-1] + ex)
+            
+            P_poteaux_total = [G_list[i] + Q_list[i] for i in range(nb_poteaux)]
+            x_cg = sum(P_poteaux_total[i] * pos_x[i] for i in range(nb_poteaux)) / sum(P_poteaux_total)
+            excentricite = (L_totale / 2) - x_cg
+            
+            # Contraintes au sol
+            sig1 = (N_total_ser / S_semelle) * (1 + 6 * excentricite / L_totale)
+            sig2 = (N_total_ser / S_semelle) * (1 - 6 * excentricite / L_totale)
+            sig_max = max(sig1, sig2)
+
+            # --- 3. AFFICHAGE DES RÉSULTATS ---
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Pression Max Sol", f"{sig_max:.2f} kPa")
+            col2.metric("Excentricité", f"{excentricite:.3f} m")
+            col3.metric("Statut Sol", "✅ OK" if sig_max <= qadm else "❌ EXCES")
+
+            if sig_max > qadm:
+                st.warning(f"⚠️ La pression dépasse la capacité du sol ({qadm} kPa). Augmentez la largeur B.")
+
+            # Onglets pour le détail
+            t1, t2 = st.tabs(["📊 Analyse Stabilité", "🏗️ Ferraillage & Charges"])
+            
+            with t1:
+                st.subheader("Répartition des pressions sur le sol")
+                fig2, ax2 = plt.subplots(figsize=(10, 4))
+                ax2.plot([0, L_totale], [sig1, sig2], 'b-o', label="Pression (kPa)")
+                ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.2, color='blue')
+                ax2.axhline(qadm, color='red', linestyle='--', label="Limite Sol")
+                ax2.set_xlabel("Longueur de la semelle (m)")
+                ax2.set_ylabel("Contrainte (kPa)")
+                ax2.legend()
+                st.pyplot(fig2)
+
+                st.write("**Détail des charges :**")
+                st.write(f"- Poids Semelle : {P_semelle:.2f} kN")
+                st.write(f"- Poids Longrine : {P_longrine:.2f} kN")
+                st.write(f"- Charge Poteaux (G+Q) : {sum(P_poteaux_total):.2f} kN")
+
+            with t2:
+                # Ferraillage transversal
+                q_remblai_dist = P_remblai / (2 * l_debord_transv * L_totale) if l_debord_transv > 0 else 0
+                M_transv = q_remblai_dist * (l_debord_transv**2) / 2
+                
+                # Ferraillage
+                d_utile = h_semelle - 0.05
+                As_calc = (M_transv * 1e6) / (0.9 * d_utile * 1000 * fyd)
+                As_min = 0.0015 * B_semelle * 1000 * h_semelle * 1000 # mm²/ml
+                
+                st.subheader("Ferraillage Transversal (par ml)")
+                c_a, c_b = st.columns(2)
+                c_a.write(f"Moment en console : **{M_transv:.2f} kNm/ml**")
+                c_b.write(f"Section d'acier : **{max(As_calc, As_min):.1f} mm²/ml**")
+                
+                st.divider()
+                st.subheader("Charges pour calcul Longrine (ELU)")
+                q_G_longrine = (sum(G_list) + P_semelle + P_longrine) / L_totale
+                q_Q_longrine = sum(Q_list) / L_totale
+                st.success(f"Charge permanente G : **{q_G_longrine:.2f} kN/m**")
+                st.success(f"Charge exploitation Q : **{q_Q_longrine:.2f} kN/m**")
+                st.info("💡 Utilisez ces valeurs dans le module 'Poutre Continue' pour ferrailler la longrine.")
+
+    except Exception as e:
+        st.error(f"Saisie incomplète ou erronée : {e}")
 
 elif menu == "🌉 Poutre Continue":
     st.header("🌉 Calcul de Poutre Continue")

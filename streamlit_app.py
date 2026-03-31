@@ -382,43 +382,45 @@ elif menu == "🌉 Poutre Continue":
     ax_v.set_xlabel("Position (m)")
     st.pyplot(fig)
 
-    # 6. RÉSUMÉ FERRAILLAGE (Métrics)
+# 6. RÉSUMÉ FERRAILLAGE (Métrics)
     st.divider()
     m_max = max([abs(m) for m in M_elu] + [d['M. Travée'] for d in data_res])
-    as_est = (m_max*1e-3)/(0.9*(h_poutre-0.05)*(500/1.15))*1e4
+    
+    # Correction : On utilise le nom as_estime partout
+    as_estime = (m_max*1e-3)/(0.9*(h_poutre-0.05)*(500/1.15))*1e4
+    
     c1, c2 = st.columns(2)
     c1.metric("Moment Max Absolu", f"{m_max:.3f} kNm")
-    c2.metric("Section Acier (As)", f"{as_est:.3f} cm²")
+    c2.metric("Section Acier (As)", f"{as_estime:.3f} cm²")
 
-    # --- SECTION FERRAILLAGE RÉEL ---
-st.header("🏗️ Choix du Ferraillage Réel")
+    # --- SECTION FERRAILLAGE RÉEL (BIEN INDENTÉ) ---
+    st.header("🏗️ Choix du Ferraillage Réel")
 
-col_f1, col_f2 = st.columns(2)
+    col_f1, col_f2 = st.columns(2)
 
-with col_f1:
-    diametre_base = st.selectbox("Diamètre principal (Travée)", [10, 12, 14, 16], index=1, help="Diamètre des barres de traction en bas")
-    nb_barres = st.number_input("Nombre de barres", min_value=2, max_value=6, value=3)
-    
-    # Calcul de la section réelle fournie
-    section_fournie = nb_barres * (3.1415 * (diametre_base/20)**2) # en cm2
-    st.write(f"Section Acier fournie : **{section_fournie:.2f} cm²**")
+    with col_f1:
+        diametre_base = st.selectbox("Diamètre principal (Travée)", [10, 12, 14, 16], index=1)
+        nb_barres = st.number_input("Nombre de barres", min_value=2, max_value=8, value=3)
+        
+        # Calcul de la section réelle fournie avec np.pi
+        section_fournie = nb_barres * (np.pi * (diametre_base/20)**2) 
+        st.write(f"Section Acier fournie : **{section_fournie:.2f} cm²**")
 
-with col_f2:
-    st.info("💡 **Mode Optimisation**")
-    # Le bouton est désactivé (simulateur de version Pro)
-    st.checkbox("Mélanger les diamètres (ex: 2HA12 + 1HA10)", disabled=True)
-    if st.button("🚀 Activer l'optimisation économique"):
-        st.warning("🔒 **Option Verrouillée** : L'optimisation automatique pour réduire le coût du fer est disponible dans la version **Expertise**. Contactez l'ingénieur pour une note de calcul optimisée.")
+    with col_f2:
+        st.info("💡 **Mode Optimisation**")
+        st.checkbox("Mélanger les diamètres (ex: 2HA12 + 1HA10)", disabled=True)
+        if st.button("🚀 Activer l'optimisation économique"):
+            st.warning("🔒 **Option Verrouillée** : Contactez l'ingénieur pour une note de calcul optimisée.")
 
-# --- VÉRIFICATION ET VOYANTS ---
-section_requise = as_estime # On récupère la valeur calculée plus haut
-if section_fournie >= section_requise:
-    st.success(f"✅ **CONFORME** : {section_fournie:.2f} cm² > {section_requise:.2f} cm²")
-else:
-    st.error(f"❌ **INSUFFISANT** : Il manque {(section_requise - section_fournie):.2f} cm²")
+    # --- VÉRIFICATION ET VOYANTS ---
+    # Utilisation du même nom : as_estime
+    if section_fournie >= as_estime:
+        st.success(f"✅ **CONFORME** : {section_fournie:.2f} cm² > {as_estime:.2f} cm²")
+    else:
+        st.error(f"❌ **INSUFFISANT** : Il manque {(as_estime - section_fournie):.2f} cm²")
 
-# --- LE FERRAILLAGE TRANSVERSAL (CADRES) ---
-st.subheader("⛓️ Armatures Transversales (Cadres)")
-phi_t = st.selectbox("Diamètre cadres", [6, 8], index=0)
-st.write(f"Espacement maximum conseillé près des appuis : **15 cm**")
-st.caption("Le détail des espacements (Loi de Caquot) est inclus dans la note de calcul exportée.")
+    # --- LE FERRAILLAGE TRANSVERSAL (CADRES) ---
+    st.subheader("⛓️ Armatures Transversales (Cadres)")
+    phi_t = st.selectbox("Diamètre cadres", [6, 8], index=0)
+    st.write(f"Espacement maximum conseillé près des appuis : **15 cm**")
+    st.caption("Le détail des espacements (Loi de Caquot) est inclus dans la note de calcul exportée.")

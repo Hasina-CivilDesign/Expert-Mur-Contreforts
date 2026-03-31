@@ -307,160 +307,85 @@ elif menu == "📐 Semelle Filante":
         st.error(f"Erreur de calcul : Vérifiez vos données saisies ({e})")
 
 elif menu == "🌉 Poutre Continue":
-    st.header("🌉 Calcul Exact : Méthode des 3 Moments")
-    st.write("Ce module calcule les moments exacts (Clapeyron) pour une poutre continue sous charges réparties.")
-
-    # 1. SAISIE DES DONNÉES
+    st.header("🌉 Calcul de Poutre Continue (Méthode des 3 Moments)")
+    
+    # 1. ENTRÉES (Sidebar)
     with st.sidebar:
-        st.subheader("📏 Géométrie & Matériau")
+        st.subheader("📏 Paramètres Poutre")
         n = st.number_input("Nombre de travées", min_value=1, max_value=6, value=2)
         b_poutre = st.number_input("Largeur b (m)", value=0.20)
         h_poutre = st.number_input("Hauteur h (m)", value=0.45)
         gamma_mat = st.number_input("Poids vol. (kN/m³)", value=25.0)
         g_pp = b_poutre * h_poutre * gamma_mat
-        st.info(f"Poids propre auto : {g_pp:.2f} kN/m")
 
-    # Colonnes pour saisir L, G, Q par travée
-    st.subheader("🏗️ Chargement par travée")
-    L = []
-    G = []
-    Q = []
-    cols_input = st.columns(n)
+    # 2. SAISIE DES CHARGES (Main)
+    L, G, Q = [], [], []
+    cols = st.columns(n)
     for i in range(n):
-        with cols_input[i]:
+        with cols[i]:
             st.write(f"**Travée {i+1}**")
-            L.append(st.number_input(f"L (m)", value=3.5, key=f"Lt{i}"))
-            g_saisi = st.number_input(f"G hors PP", value=15.0, key=f"Gt{i}")
-            G.append(g_saisi + g_pp)
-            Q.append(st.number_input(f"Q (kN/m)", value=5.0, key=f"Qt{i}"))
+            L.append(st.number_input(f"L (m)", value=3.5, key=f"L{i}"))
+            g_ext = st.number_input(f"G (kN/m)", value=15.0, key=f"G{i}")
+            G.append(g_ext + g_pp)
+            Q.append(st.number_input(f"Q (kN/m)", value=5.0, key=f"Q{i}"))
 
-    # 2. MOTEUR DE CALCUL (Ton script adapté)
-    if n >= 1:
-        # Résolution matricielle pour ELU (1.35G + 1.5Q)
-        import numpy as np
+    # 3. CALCULS MATRICIELS (ELU)
+    import numpy as np
+    P_elu = [1.35*G[i] + 1.5*Q[i] for i in range(n)]
+    A_mat = np.zeros((n+1, n+1))
+    B_vec = np.zeros(n+1)
+    A_mat[0,0], A_mat[-1,-1] = 1, 1 
+
+    for i in range(1, n):
+        Lw, Le = L[i-1], L[i]
+        A_mat[i, i-1] = Lw / 6
+        A_mat[i, i] = (Lw + Le) / 3
+        A_mat[i, i+1] = Le / 6
+        B_vec[i] = -(P_elu[i-1]*Lw**3 + P_elu[i]*Le**3)/24
+
+    M_elu = np.linalg.solve(A_mat, B_vec)
+
+    # 4. SYNTHÈSE DES RÉSULTATS (Tableau)
+    st.subheader("📋 Tableau des Moments et Efforts")
+    data_res = []
+    for i in range(n):
+        xi_max = (L[i]/2) + (M_elu[i+1] - M_elu[i])/(P_elu[i]*L[i])
+        mt_max = M_elu[i]*(1-xi_max/L[i]) + M_elu[i+1]*(xi_max/L[i]) + P_elu[i]*xi_max*(L[i]-xi_max)/2
+        Vw = abs(-P_elu[i]*L[i]/2 + (M_elu[i]-M_elu[i+1])/L[i])
+        Ve = abs(P_elu[i]*L[i]/2 + (M_elu[i]-M_elu[i+1])/L[i])
+        data_res.append({"Travée": i+1, "M. Appui G": round(M_elu[i],2), "M. Travée": round(mt_max,2), "M. Appui D": round(M_elu[i+1],2), "V. Max": round(max(Vw, Ve),2)})
+    st.table(data_res)
+
+    # 5. GRAPHIQUE UNIQUE (M et V)
+    fig, (ax_m, ax_v) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+    plt.subplots_adjust(hspace=0.3)
+    
+    pos = 0
+    for i in range(n):
+        x = np.linspace(0, L[i], 100)
+        M = M_elu[i]*(1-x/L[i]) + M_elu[i+1]*(x/L[i]) + P_elu[i]*x*(L[i]-x)/2
+        V = (-P_elu[i]*L[i]/2 + (M_elu[i]-M_elu[i+1])/L[i]) + P_elu[i]*x
         
-        P_elu = [1.35*G[i] + 1.5*Q[i] for i in range(n)]
-        
-        # Matrice A et Vecteur B
-        A_mat = np.zeros((n+1, n+1))
-        B_vec = np.zeros(n+1)
-        A_mat[0,0], A_mat[-1,-1] = 1, 1 # Appuis de rive simples (M=0)
+        ax_m.plot(pos+x, M, color="#1f77b4", lw=2)
+        ax_m.fill_between(pos+x, M, alpha=0.1, color="#1f77b4")
+        ax_v.plot(pos+x, V, color="#d62728", lw=2)
+        ax_v.fill_between(pos+x, V, alpha=0.1, color="#d62728")
+        ax_m.plot(pos, 0, '^k')
+        ax_v.plot(pos, 0, 'sk', ms=4)
+        pos += L[i]
+    
+    ax_m.plot(pos, 0, '^k')
+    ax_v.plot(pos, 0, 'sk', ms=4)
+    ax_m.set_ylabel("Moment (kNm)")
+    ax_m.invert_yaxis() # Sens BA
+    ax_v.set_ylabel("Tranchant (kN)")
+    ax_v.set_xlabel("Position (m)")
+    st.pyplot(fig)
 
-        for i in range(1, n):
-            L_prev, L_curr = L[i-1], L[i]
-            A_mat[i, i-1] = L_prev / 6
-            A_mat[i, i] = (L_prev + L_curr) / 3
-            A_mat[i, i+1] = L_curr / 6
-            B_vec[i] = -(P_elu[i-1]*L_prev**3 + P_elu[i]*L_curr**3)/24
-
-        M_elu = np.linalg.solve(A_mat, B_vec)
-
-        # 3. AFFICHAGE DES RÉSULTATS
-        st.divider()
-        res_m, res_v = st.columns([2, 1])
-        
-        with res_m:
-            st.subheader("📈 Diagramme des Moments (ELU)")
-            fig_poutre, ax_poutre = plt.subplots(figsize=(10, 4))
-            pos_x = 0
-            for i in range(n):
-                x_vals = np.linspace(0, L[i], 50)
-                # Equation de la parabole avec moments aux appuis
-                M_vals = M_elu[i]*(1 - x_vals/L[i]) + M_elu[i+1]*(x_vals/L[i]) + P_elu[i]*x_vals*(L[i]/2 - x_vals/2)
-                
-                ax_poutre.plot(pos_x + x_vals, -M_vals, color="red", linewidth=2)
-                ax_poutre.fill_between(pos_x + x_vals, -M_vals, alpha=0.1, color="red")
-                
-                # Dessin appuis
-                ax_poutre.plot(pos_x, 0, '^k', markersize=10)
-                pos_x += L[i]
-            ax_poutre.plot(pos_x, 0, '^k', markersize=10)
-            ax_poutre.axhline(0, color='black', linewidth=1)
-            ax_poutre.set_ylabel("Moment (kNm)")
-            st.pyplot(fig_poutre)
-
-        with res_v:
-            st.subheader("📋 Moments aux Appuis")
-            for i, m in enumerate(M_elu):
-                st.write(f"Appui {i+1} : **{abs(m):.2f} kNm**")
-
-        # ... (après le calcul de M_elu par la matrice) ...
-
-       # --- 3. SYNTHÈSE DES RÉSULTATS (TABLEAU) ---
-        st.subheader("📋 Résultats de Calcul (ELU)")
-        
-        data_travées = []
-        for i in range(n):
-            L_i, p_i = L[i], P_elu[i]
-            Mw, Me = M_elu[i], M_elu[i+1]
-            
-            # Position et valeur du moment max en travée
-            xi_max = (L_i / 2) + (Me - Mw) / (p_i * L_i)
-            mt_max = Mw * (1 - xi_max/L_i) + Me * (xi_max/L_i) + p_i * xi_max * (L_i - xi_max) / 2
-            
-            # Effort tranchant max
-            Vw = abs(-p_i * L_i / 2 + (Mw - Me) / L_i)
-            Ve = abs(p_i * L_i / 2 + (Mw - Me) / L_i)
-            
-            data_travées.append({
-                "Travée": i + 1,
-                "Long. (m)": L_i,
-                "M. Appui G (kNm)": round(Mw, 2),
-                "M. Travée (kNm)": round(mt_max, 2),
-                "M. Appui D (kNm)": round(Me, 2),
-                "V. Max (kN)": round(max(Vw, Ve), 2)
-            })
-
-        # Affichage du tableau immédiatement sous le titre
-        st.table(data_travées)
-
-        # --- 4. DIAGRAMMES M ET V (UN SEUL APPEL GRAPHIQUE) ---
-        fig, (ax_m, ax_v) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
-        plt.subplots_adjust(hspace=0.3) # Réduit l'espace entre les deux graphes
-
-        pos_current = 0
-        for i in range(n):
-            x_vals = np.linspace(0, L[i], 100)
-            p_i = P_elu[i]
-            
-            # Courbe M
-            M_vals = M_elu[i]*(1 - x_vals/L[i]) + M_elu[i+1]*(x_vals/L[i]) + p_i*x_vals*(L[i] - x_vals)/2
-            ax_m.plot(pos_current + x_vals, M_vals, color="#1f77b4", linewidth=2)
-            ax_m.fill_between(pos_current + x_vals, M_vals, alpha=0.1, color="#1f77b4")
-            
-            # Courbe V
-            Vw = -p_i * L[i] / 2 + (M_elu[i] - M_elu[i+1]) / L[i]
-            V_vals = Vw + p_i * x_vals
-            ax_v.plot(pos_current + x_vals, V_vals, color="#d62728", linewidth=2)
-            ax_v.fill_between(pos_current + x_vals, V_vals, alpha=0.1, color="#d62728")
-
-            # Appuis
-            ax_m.plot(pos_current, 0, '^k', markersize=8)
-            ax_v.plot(pos_current, 0, 'sk', markersize=5)
-            pos_current += L[i]
-
-        ax_m.plot(pos_current, 0, '^k', markersize=8)
-        ax_v.plot(pos_current, 0, 'sk', markersize=5)
-
-        ax_m.set_ylabel("Moment M (kNm)")
-        ax_m.invert_yaxis() 
-        ax_m.grid(True, alpha=0.2)
-        
-        ax_v.set_ylabel("Tranchant V (kN)")
-        ax_v.grid(True, alpha=0.2)
-        ax_v.set_xlabel("Position (m)")
-
-        # On affiche le graphique ici, une seule fois
-        st.pyplot(fig)
-
-        # --- 5. RÉSUMÉ DE FERRAILLAGE (EN BAS) ---
-        st.divider()
-        m_max_global = max([abs(m) for m in M_elu]) # Max sur appuis
-        d = h_poutre - 0.05
-        as_estime = (m_max_global * 1e-3) / (0.9 * d * (500/1.15)) * 1e4
-        
-        col1, col2 = st.columns(2)
-        col1.metric("Moment Max Appui", f"{m_max_global:.2f} kNm")
-        col2.metric("As max (estimé)", f"{as_estime:.2f} cm²")
-
-    st.success("✅ Calcul terminé avec succès !")
+    # 6. RÉSUMÉ FERRAILLAGE (Métrics)
+    st.divider()
+    m_max = max([abs(m) for m in M_elu] + [d['M. Travée'] for d in data_res])
+    as_est = (m_max*1e-3)/(0.9*(h_poutre-0.05)*(500/1.15))*1e4
+    c1, c2 = st.columns(2)
+    c1.metric("Moment Max Absolu", f"{m_max:.2f} kNm")
+    c2.metric("Section Acier (As)", f"{as_est:.2f} cm²")

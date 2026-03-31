@@ -183,7 +183,7 @@ while z <= H_rideau:
         })
         z += 1.0
 
-     if as_max_trouve > 7:
+if as_max_trouve > 7:
         st.warning(
             f"💡 **Conseil** : Ferraillage élevé ({as_max_trouve:.2f} cm²). Réduisez l'entraxe ({e}m) pour économiser de l'acier.")
 
@@ -205,7 +205,7 @@ with tab3:
     col_c1.metric("Largeur utilisée (m)", f"{L_cont} m")
     col_c2.metric("Acier Contrefort (As)", f"{As_cont:.2f} cm²")
 
-    if As_cont > 40:
+if As_cont > 40:
         st.error("⚠️ Section d'acier du contrefort très élevée. Augmentez la largeur L_cont ou l'épaisseur b0.")
 
     # --- AJOUT DU BILAN QUANTITATIF FINAL ---
@@ -217,7 +217,7 @@ with tab3:
 
     # Estimation du poids d'acier (Ratio moyen 80kg/m3 + ajustement selon As_max)
     ratio_base = 80
-    if as_max_trouve > 7 or As_cont > 30:
+if as_max_trouve > 7 or As_cont > 30:
         ratio_base = 110  # On augmente le ratio si c'est dense
 
     poids_acier_ml = vol_beton_ml * ratio_base

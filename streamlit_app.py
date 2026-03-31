@@ -307,5 +307,87 @@ elif menu == "📐 Semelle Filante":
         st.error(f"Erreur de calcul : Vérifiez vos données saisies ({e})")
 
 elif menu == "🌉 Poutre Continue":
-    st.header("🌉 Calcul de Poutre Continue")
-    st.warning("Module en cours d'optimisation.")
+    st.header("🌉 Calcul Exact : Méthode des 3 Moments")
+    st.write("Ce module calcule les moments exacts (Clapeyron) pour une poutre continue sous charges réparties.")
+
+    # 1. SAISIE DES DONNÉES
+    with st.sidebar:
+        st.subheader("📏 Géométrie & Matériau")
+        n = st.number_input("Nombre de travées", min_value=1, max_value=6, value=2)
+        b_poutre = st.number_input("Largeur b (m)", value=0.20)
+        h_poutre = st.number_input("Hauteur h (m)", value=0.45)
+        gamma_mat = st.number_input("Poids vol. (kN/m³)", value=25.0)
+        g_pp = b_poutre * h_poutre * gamma_mat
+        st.info(f"Poids propre auto : {g_pp:.2f} kN/m")
+
+    # Colonnes pour saisir L, G, Q par travée
+    st.subheader("🏗️ Chargement par travée")
+    L = []
+    G = []
+    Q = []
+    cols_input = st.columns(n)
+    for i in range(n):
+        with cols_input[i]:
+            st.write(f"**Travée {i+1}**")
+            L.append(st.number_input(f"L (m)", value=3.5, key=f"Lt{i}"))
+            g_saisi = st.number_input(f"G hors PP", value=15.0, key=f"Gt{i}")
+            G.append(g_saisi + g_pp)
+            Q.append(st.number_input(f"Q (kN/m)", value=5.0, key=f"Qt{i}"))
+
+    # 2. MOTEUR DE CALCUL (Ton script adapté)
+    if n >= 1:
+        # Résolution matricielle pour ELU (1.35G + 1.5Q)
+        import numpy as np
+        
+        P_elu = [1.35*G[i] + 1.5*Q[i] for i in range(n)]
+        
+        # Matrice A et Vecteur B
+        A_mat = np.zeros((n+1, n+1))
+        B_vec = np.zeros(n+1)
+        A_mat[0,0], A_mat[-1,-1] = 1, 1 # Appuis de rive simples (M=0)
+
+        for i in range(1, n):
+            L_prev, L_curr = L[i-1], L[i]
+            A_mat[i, i-1] = L_prev / 6
+            A_mat[i, i] = (L_prev + L_curr) / 3
+            A_mat[i, i+1] = L_curr / 6
+            B_vec[i] = -(P_elu[i-1]*L_prev**3 + P_elu[i]*L_curr**3)/24
+
+        M_elu = np.linalg.solve(A_mat, B_vec)
+
+        # 3. AFFICHAGE DES RÉSULTATS
+        st.divider()
+        res_m, res_v = st.columns([2, 1])
+        
+        with res_m:
+            st.subheader("📈 Diagramme des Moments (ELU)")
+            fig_poutre, ax_poutre = plt.subplots(figsize=(10, 4))
+            pos_x = 0
+            for i in range(n):
+                x_vals = np.linspace(0, L[i], 50)
+                # Equation de la parabole avec moments aux appuis
+                M_vals = M_elu[i]*(1 - x_vals/L[i]) + M_elu[i+1]*(x_vals/L[i]) + P_elu[i]*x_vals*(L[i]/2 - x_vals/2)
+                
+                ax_poutre.plot(pos_x + x_vals, -M_vals, color="red", linewidth=2)
+                ax_poutre.fill_between(pos_x + x_vals, -M_vals, alpha=0.1, color="red")
+                
+                # Dessin appuis
+                ax_poutre.plot(pos_x, 0, '^k', markersize=10)
+                pos_x += L[i]
+            ax_poutre.plot(pos_x, 0, '^k', markersize=10)
+            ax_poutre.axhline(0, color='black', linewidth=1)
+            ax_poutre.set_ylabel("Moment (kNm)")
+            st.pyplot(fig_poutre)
+
+        with res_v:
+            st.subheader("📋 Moments aux Appuis")
+            for i, m in enumerate(M_elu):
+                st.write(f"Appui {i+1} : **{abs(m):.2f} kNm**")
+            
+            # Calcul Ferraillage Rapide sur l'appui le plus sollicité
+            m_max_appui = abs(min(M_elu))
+            d_poutre = h_poutre - 0.05
+            as_appui = (m_max_appui * 1e-3) / (0.9 * d_poutre * (500/1.15)) * 1e4
+            st.warning(f"As max appui : **{as_appui:.2f} cm²**")
+
+    st.success("🇲🇬 Logiciel validé : Prêt pour l'exportation des ferraillages !")

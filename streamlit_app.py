@@ -387,5 +387,5 @@ elif menu == "🌉 Poutre Continue":
     m_max = max([abs(m) for m in M_elu] + [d['M. Travée'] for d in data_res])
     as_est = (m_max*1e-3)/(0.9*(h_poutre-0.05)*(500/1.15))*1e4
     c1, c2 = st.columns(2)
-    c1.metric("Moment Max Absolu", f"{m_max:.2f} kNm")
-    c2.metric("Section Acier (As)", f"{as_est:.2f} cm²")
+    c1.metric("Moment Max Absolu", f"{m_max:.3f} kNm")
+    c2.metric("Section Acier (As)", f"{as_est:.3f} cm²")

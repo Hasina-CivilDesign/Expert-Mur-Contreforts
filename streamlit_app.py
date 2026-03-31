@@ -50,58 +50,76 @@ elif menu == "🧱 Mur à Contreforts":
     st.warning("⚠️ Recolle ici ton code du mur pour le réactiver.")
 
 # --- MODULE SEMELLE FILANTE ---
-# --- MODULE SEMELLE FILANTE ---
+# --- MODULE SEMELLE FILANTE (VERSION VARIABLE) ---
 elif menu == "📐 Semelle Filante":
-    st.header("📐 Expertise : Semelle Filante + Longrine")
+    st.header("📐 Expertise : Semelle Filante Multi-Poteaux")
 
-    # --- BARRE LATÉRALE POUR LA SEMELLE ---
     with st.sidebar:
         st.subheader("Paramètres de la Semelle")
         B_sem = st.number_input("Largeur semelle B (m)", value=0.60, step=0.05)
         h_sem = st.number_input("Hauteur semelle h (m)", value=0.30, step=0.05)
-        q_adm = st.number_input("Contrainte sol admissible (kPa/kN/m²)", value=200.0)
+        q_adm = st.number_input("Contrainte sol admissible (kPa)", value=200.0)
         
-        st.subheader("Charges Poteaux")
-        g_poteau = st.number_input("Charge Permanente G totale (kN)", value=150.0)
-        q_poteau = st.number_input("Charge Variable Q totale (kN)", value=50.0)
-        
-        st.subheader("Géométrie du projet")
-        L_totale_sem = st.number_input("Longueur totale de la semelle (m)", value=10.0)
-        dist_poteaux = st.text_input("Entraxes entre poteaux (m)", value="3.5 3.5 3.0")
+        st.divider()
+        st.subheader("Configuration des Poteaux")
+        # Saisie des distances entre poteaux (ex: 3.5 4.2 3.8)
+        txt_entraxes = st.text_input("Entraxes entre poteaux (m)", value="3.5 4.0")
+        # Saisie des charges G par poteau
+        txt_G = st.text_input("Charges G par poteau (kN)", value="120 150 120")
+        # Saisie des charges Q par poteau
+        txt_Q = st.text_input("Charges Q par poteau (kN)", value="40 50 40")
 
-    # --- CALCULS ---
-    # (On simplifie la logique de ton script pour l'affichage Streamlit)
-    N_elu = 1.35 * g_poteau + 1.5 * q_poteau
-    surface_sem = B_sem * L_totale_sem
-    poids_propre_sem = B_sem * h_sem * L_totale_sem * 25 # 25 kN/m3 pour le BA
-    
-    N_total_ser = (g_poteau + q_poteau + poids_propre_sem)
-    sigma_sol_calc = N_total_ser / surface_sem
+    # --- LOGIQUE DE CALCUL DYNAMIQUE ---
+    try:
+        # Conversion des textes en listes de nombres
+        list_L = [float(x) for x in txt_entraxes.split()]
+        list_G = [float(x) for x in txt_G.split()]
+        list_Q = [float(x) for x in txt_Q.split()]
 
-    # --- AFFICHAGE DES RÉSULTATS ---
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.metric("Pression sur le sol", f"{sigma_sol_calc:.2f} kPa")
-        if sigma_sol_calc <= q_adm:
-            st.success("✅ Capacité portante OK")
+        # Vérification de la cohérence (Nb poteaux = Nb entraxes + 1)
+        if len(list_G) != len(list_L) + 1:
+            st.error("⚠️ Le nombre de charges G doit être égal au (nombre d'entraxes + 1)")
         else:
-            st.error("❌ Sol insuffisant ! Augmentez B.")
+            L_totale_calc = sum(list_L)
+            G_total = sum(list_G)
+            Q_total = sum(list_Q)
+            
+            poids_propre_sem = B_sem * h_sem * L_totale_calc * 25
+            N_total_ser = G_total + Q_total + poids_propre_sem
+            
+            sigma_sol_calc = N_total_ser / (B_sem * L_totale_calc)
 
-    with col2:
-        st.metric("Charge Totale (ELS)", f"{N_total_ser:.2f} kN")
+            # --- AFFICHAGE DES RÉSULTATS ---
+            st.subheader("Résultats du calcul réel")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Longueur Totale", f"{L_totale_calc:.2f} m")
+            c2.metric("Charge Totale G+Q", f"{G_total + Q_total:.1f} kN")
+            c3.metric("Pression Sol", f"{sigma_sol_calc:.2f} kPa")
 
-    # Petit graphique de la section
-    fig2, ax2 = plt.subplots(figsize=(6, 2))
-    ax2.add_patch(plt.Rectangle((0, 0), B_sem, h_sem, color='grey', alpha=0.5, label="Semelle"))
-    ax2.set_xlim(-0.2, B_sem + 0.2)
-    ax2.set_ylim(-0.1, h_sem + 0.2)
-    ax2.set_title("Coupe de la Semelle")
-    st.pyplot(fig2)
+            if sigma_sol_calc <= q_adm:
+                st.success("✅ La semelle est stable sur toute sa longueur.")
+            else:
+                st.error("❌ Risque de poinçonnement ou tassement. Augmentez la largeur B.")
 
-    st.info("💡 Prochaine amélioration : Calcul du ferraillage transversal automatique.")
-    st.header("📐 Expertise : Semelle Filante + Longrine")
-    st.info("🚧 Ce module est en cours d'intégration. On va transformer ton script Python en interface Web ici.")
+            # --- SCHÉMA DE LA SEMELLE ---
+            st.write("**Schéma de répartition des charges :**")
+            fig3, ax3 = plt.subplots(figsize=(10, 2))
+            # Dessin de la semelle
+            ax3.add_patch(plt.Rectangle((0, 0), L_totale_calc, 0.3, color='lightgrey'))
+            # Dessin des poteaux (flèches)
+            current_x = 0
+            ax3.annotate(f"P1\n{list_G[0]}kN", (0, 0.3), xytext=(0, 0.8), arrowprops=dict(arrowstyle='->'))
+            for i, dist in enumerate(list_L):
+                current_x += dist
+                ax3.annotate(f"P{i+2}\n{list_G[i+1]}kN", (current_x, 0.3), xytext=(current_x, 0.8), arrowprops=dict(arrowstyle='->'))
+            
+            ax3.set_xlim(-1, L_totale_calc + 1)
+            ax3.set_ylim(0, 1.2)
+            ax3.axis('off')
+            st.pyplot(fig3)
+
+    except ValueError:
+        st.warning("Veuillez entrer des chiffres valides séparés par des espaces.")
 
 # --- MODULE POUTRE CONTINUE ---
 elif menu == "🌉 Poutre Continue":

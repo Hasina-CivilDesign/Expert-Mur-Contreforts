@@ -154,7 +154,7 @@ with tab1:
     ax.set_ylabel("Pression (kPa)")
     st.pyplot(fig)
 
- with tab2:
+with tab2:
     st.subheader("Ferraillage du Rideau")
 
 

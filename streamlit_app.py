@@ -210,13 +210,12 @@ if As_cont > 40:
 
     # --- AJOUT DU BILAN QUANTITATIF FINAL ---
 st.divider()
-st.subheader("📈 Bilan Quantitatif Global (au mètre linéaire)")
+st.subheader("📈 Bilan Quantitatif Global (au mètre linéaire)"
+# Calcul du volume de béton (Rideau + Semelle + Contreforts répartis sur l'entraxe)
+vol_beton_ml = (W_rideau + W_semelle) / 25 + (H_cont_calc * L_cont / 2) * b0 / e
 
-    # Calcul du volume de béton (Rideau + Semelle + Contreforts répartis sur l'entraxe)
-    vol_beton_ml = (W_rideau + W_semelle) / 25 + (H_cont_calc * L_cont / 2) * b0 / e
-
-    # Estimation du poids d'acier (Ratio moyen 80kg/m3 + ajustement selon As_max)
-    ratio_base = 80
+ # Estimation du poids d'acier (Ratio moyen 80kg/m3 + ajustement selon As_max)
+ratio_base = 80
 if as_max_trouve > 7 or As_cont > 30:
         ratio_base = 110  # On augmente le ratio si c'est dense
 

@@ -192,19 +192,25 @@ elif menu == "📐 Semelle Filante":
         if len(entraxes) != nb_poteaux - 1 or len(G_list) != nb_poteaux or len(Q_list) != nb_poteaux:
             st.error("❌ Erreur : Nombre de valeurs incorrect.")
         else:
+            # --- CALCULS GÉOMÉTRIQUES ---
             L_totale = sum(entraxes) + 2 * debord_ext
             S_semelle = B_semelle * L_totale
             P_semelle = B_semelle * h_semelle * L_totale * gamma_beton
             
-            N_total_ser = sum(G_list) + sum(Q_list) + P_semelle
+            # --- CALCUL DU CENTRE DE GRAVITÉ (CG) ---
             pos_x = [debord_ext]
             for ex in entraxes: pos_x.append(pos_x[-1] + ex)
             
             P_poteaux_total = [G_list[i] + Q_list[i] for i in range(nb_poteaux)]
-            # --- CALCUL DU CENTRE DE GRAVITE DES CHARGES ---
             x_cg = sum(P_poteaux_total[i] * pos_x[i] for i in range(nb_poteaux)) / sum(P_poteaux_total)
-            excentricite = (L_totale / 2) - x_cg
             
+            # --- CALCUL DE L'EXCENTRICITÉ ---
+            x_milieu = L_totale / 2
+            excentricite = x_cg - x_milieu
+            
+            N_total_ser = sum(P_poteaux_total) + P_semelle
+            
+            # --- CALCUL DES CONTRAINTES (Navier) ---
             sig1 = (N_total_ser / S_semelle) * (1 + 6 * excentricite / L_totale)
             sig2 = (N_total_ser / S_semelle) * (1 - 6 * excentricite / L_totale)
             sig_max = max(sig1, sig2)
@@ -215,27 +221,50 @@ elif menu == "📐 Semelle Filante":
                 st.subheader("📊 Analyse de la Portance & Équilibre")
                 res_a, res_b, res_c = st.columns(3)
                 res_a.metric("Pression Max", f"{sig_max:.2f} kPa")
-                res_b.metric("Position G (depuis gauche)", f"{x_cg:.2f} m")
-                if sig_max > qadm: res_c.error("❌ SOL INSUFFISANT")
-                else: res_c.success("✅ SOL OK")
+                res_b.metric("Excentricité (e)", f"{excentricite:.3f} m")
+                res_c.metric("Position CG", f"{x_cg:.2f} m")
 
+                # Graphique Expert
                 fig2, ax2 = plt.subplots(figsize=(10, 5))
-                ax2.plot([0, L_totale], [sig1, sig2], 'b-', linewidth=3, label="Répartition Pression")
+                
+                # 1. Zone du Tiers Central (en Jaune)
+                ax2.axvspan(L_totale/3, 2*L_totale/3, color='yellow', alpha=0.2, label="Tiers Central (Zone Stable)")
+                
+                # 2. Répartition des pressions
+                ax2.plot([0, L_totale], [sig1, sig2], color='navy', linewidth=3, label="Diagramme des contraintes")
                 ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.1, color='blue')
-                ax2.axhline(qadm, color='red', linestyle='--', label=f"Limite Sol ({qadm})")
                 
-                # Marquage CG et Poteaux
-                ax2.axvline(x_cg, color='green', linestyle=':', label=f"Centre Gravité ({x_cg:.2f}m)")
+                # 3. Limite Sol
+                ax2.axhline(qadm, color='red', linestyle='--', label=f"Limite Sol ({qadm} kPa)")
+                
+                # 4. Marquage Centre de la semelle vs Centre de Gravité
+                ax2.axvline(x_milieu, color='black', linestyle='--', alpha=0.5, label="Axe Central Semelle")
+                ax2.axvline(x_cg, color='green', linewidth=2, label=f"R (Charge Totale) à {x_cg:.2f}m")
+                
+                # 5. Dessin des poteaux
                 for i, p_pos in enumerate(pos_x):
-                    ax2.annotate(f'P{i+1}', (p_pos, sig_max*0.1), ha='center', fontweight='bold')
+                    ax2.annotate('↓', (p_pos, sig_max*1.05), ha='center', fontsize=15, color='black')
+                    ax2.text(p_pos, sig_max*1.15, f"P{i+1}", ha='center', fontweight='bold')
                 
-                ax2.set_xlabel("Longueur (m)")
+                ax2.set_xlabel("Longueur de la semelle (m)")
                 ax2.set_ylabel("Pression (kPa)")
-                ax2.legend()
+                ax2.set_ylim(bottom=0) # Pour voir le soulèvement si sig < 0
+                ax2.legend(loc='upper right', fontsize='small')
+                ax2.grid(True, linestyle=':', alpha=0.6)
                 st.pyplot(fig2)
 
+                # Diagnostic
+                st.divider()
+                if abs(excentricite) <= L_totale / 6:
+                    st.success(f"✅ **L'excentricité ({abs(excentricite):.3f}m)** est dans le tiers central (e < {L_totale/6:.3f}m). La semelle est entièrement comprimée.")
+                else:
+                    st.warning(f"⚠️ **Attention** : L'excentricité est hors du tiers central. Risque de décollement partiel de la semelle.")
+                
+                if sig_max > qadm:
+                    st.error(f"❌ **Dépassement** : La pression au sol dépasse la contrainte admissible de {qadm} kPa.")
+
     except Exception as e:
-        st.error(f"Erreur de saisie : {e}")
+        st.error(f"Erreur de calcul : {e}")
 
 elif menu == "🌉 Poutre Continue":
     st.header("🌉 Calcul de Poutre Continue")

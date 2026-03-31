@@ -219,7 +219,7 @@ ratio_base = 80
 if as_max_trouve > 7 or As_cont > 30:
         ratio_base = 110  # On augmente le ratio si c'est dense
 
-    poids_acier_ml = vol_beton_ml * ratio_base
+poids_acier_ml = vol_beton_ml * ratio_base
 
   # --- 1. AFFICHAGE DES RÉSULTATS PAR MÈTRE (DANS L'ONGLET 3) ---
     res1, res2 = st.columns(2)

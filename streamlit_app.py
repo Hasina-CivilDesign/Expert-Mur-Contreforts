@@ -422,33 +422,67 @@ elif menu == "🌉 Poutre Continue":
         # Affichage sous forme de beau tableau Streamlit
         st.table(data_travées)
 
-        # --- MISE À JOUR DU GRAPHIQUE AVEC POINTS MAX ---
-        with st.expander("📊 Voir le Diagramme des Moments"):
-            fig_poutre, ax_poutre = plt.subplots(figsize=(10, 4))
-            pos_current = 0
-            for i in range(n):
-                x_vals = np.linspace(0, L[i], 100)
-                M_vals = M_elu[i]*(1 - x_vals/L[i]) + M_elu[i+1]*(x_vals/L[i]) + P_elu[i]*x_vals*(L[i] - x_vals)/2
-                
-                ax_poutre.plot(pos_current + x_vals, -M_vals, color="#1f77b4", linewidth=2.5)
-                ax_poutre.fill_between(pos_current + x_vals, -M_vals, alpha=0.15, color="#1f77b4")
-                
-                # Ajout du texte pour le moment max en travée sur le graphe
-                xi_plot = (L[i]/2) + (M_elu[i+1] - M_elu[i])/(P_elu[i]*L[i])
-                mt_plot = M_elu[i]*(1 - xi_plot/L[i]) + M_elu[i+1]*(xi_plot/L[i]) + P_elu[i]*xi_plot*(L[i] - xi_plot)/2
-                ax_poutre.text(pos_current + xi_plot, -mt_plot - 2, f"{mt_plot:.1f}", 
-                               ha='center', color='blue', fontsize=9, fontweight='bold')
-                
-                pos_current += L[i]
-            
-            ax_poutre.axhline(0, color='black', linewidth=1.5)
-            ax_poutre.invert_yaxis() # Inversion pour le sens "béton armé"
-            st.pyplot(fig_poutre)
-            
-            # Calcul Ferraillage Rapide sur l'appui le plus sollicité
-            m_max_appui = abs(min(M_elu))
-            d_poutre = h_poutre - 0.05
-            as_appui = (m_max_appui * 1e-3) / (0.9 * d_poutre * (500/1.15)) * 1e4
-            st.warning(f"As max appui : **{as_appui:.2f} cm²**")
+       # --- 4. VISUALISATION TECHNIQUE (M et V regroupés) ---
+        st.subheader("📊 Diagrammes de Structure (ELU)")
+        
+        # On crée une seule figure avec 2 graphiques l'un sur l'autre
+        fig, (ax_m, ax_v) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
+        plt.subplots_adjust(hspace=0.3)
 
-    st.success("🇲🇬 Logiciel validé : Prêt pour l'exportation des ferraillages !")
+        pos_current = 0
+        for i in range(n):
+            L_i = L[i]
+            p_i = P_elu[i]
+            Mw, Me = M_elu[i], M_elu[i+1]
+            x_vals = np.linspace(0, L_i, 100)
+            
+            # --- COURBE DES MOMENTS (M) ---
+            M_vals = Mw*(1 - x_vals/L_i) + Me*(x_vals/L_i) + p_i*x_vals*(L_i - x_vals)/2
+            ax_m.plot(pos_current + x_vals, M_vals, color="#1f77b4", linewidth=2)
+            ax_m.fill_between(pos_current + x_vals, M_vals, alpha=0.1, color="#1f77b4")
+            
+            # Affichage valeur max en travée sur le graphe M
+            xi_plot = (L_i/2) + (Me - Mw)/(p_i * L_i)
+            mt_plot = Mw*(1 - xi_plot/L_i) + Me*(xi_plot/L_i) + p_i*xi_plot*(L_i - xi_plot)/2
+            ax_m.text(pos_current + xi_plot, mt_plot + 1, f"{mt_plot:.1f}", ha='center', fontsize=8, color='blue')
+
+            # --- COURBE DES EFFORTS TRANCHANTS (V) ---
+            Vw = -p_i * L_i / 2 + (Mw - Me) / L_i
+            Ve = p_i * L_i / 2 + (Mw - Me) / L_i
+            V_vals = Vw + p_i * x_vals
+            ax_v.plot(pos_current + x_vals, V_vals, color="#d62728", linewidth=2)
+            ax_v.fill_between(pos_current + x_vals, V_vals, alpha=0.1, color="#d62728")
+
+            # Dessin des appuis
+            ax_m.plot(pos_current, 0, '^k', markersize=8)
+            ax_v.plot(pos_current, 0, 'sk', markersize=5)
+            
+            pos_current += L_i
+
+        # Dernier appui
+        ax_m.plot(pos_current, 0, '^k', markersize=8)
+        ax_v.plot(pos_current, 0, 'sk', markersize=5)
+
+        # Réglages finaux
+        ax_m.set_ylabel("Moment (kNm)")
+        ax_m.invert_yaxis() # Convention béton armé
+        ax_m.grid(True, alpha=0.3)
+        
+        ax_v.set_ylabel("Tranchant (kN)")
+        ax_v.grid(True, alpha=0.3)
+        ax_v.set_xlabel("Distance (m)")
+
+        st.pyplot(fig)
+
+        # --- 5. RAPPEL DU FERRAILLAGE ---
+        st.divider()
+        m_max_appui = abs(min(M_elu))
+        d_poutre = h_poutre - 0.05
+        # Calcul rapide As (approximation z = 0.9d)
+        as_appui = (m_max_appui * 1e-3) / (0.9 * d_poutre * (500/1.15)) * 1e4
+        
+        c1, c2 = st.columns(2)
+        c1.metric("Moment Max Appui", f"{m_max_appui:.2f} kNm")
+        c2.metric("Section Acier Estimée", f"{as_appui:.2f} cm²")
+
+    st.success("🇲🇬 Logiciel validé : Prêt pour l'exportation !")

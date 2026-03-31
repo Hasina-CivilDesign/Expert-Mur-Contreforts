@@ -87,17 +87,60 @@ elif menu == "🧱 Mur à Contreforts":
     # --- AFFICHAGE DES ONGLETS ---
     tab1, tab2, tab3 = st.tabs(["📊 Stabilité", "🧱 Rideau", "📐 Contrefort & Bilan"])
 
-    with tab1:
-        st.subheader("Vérification de la Stabilité")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Sigma Patin", f"{sigma_1:.2f} kPa")
-        c2.metric("Sigma Talon", f"{sigma_2:.2f} kPa")
-        c3.metric("Statut Sol", "✅ OK" if sigma_1 <= sigma_sol_adm else "❌ EXCES")
-        fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot([0, B], [sigma_1, sigma_2], 'r-', linewidth=2)
-        ax.fill_between([0, B], [sigma_1, sigma_2], color='red', alpha=0.1)
-        ax.axhline(0, color='black')
-        st.pyplot(fig)
+   with tab1:
+            st.subheader("📊 Analyse de la Portance & Équilibre")
+            
+            # --- RAPPEL DES CHIFFRES CLÉS ---
+            res_a, res_b, res_c = st.columns(3)
+            res_a.metric("Pression Max (σ1)", f"{sig_max:.2f} kPa")
+            res_b.metric("Excentricité (e)", f"{excentricite:.3f} m")
+            
+            if sig_max > qadm:
+                res_c.error("❌ SOL INSUFFISANT")
+            elif sig2 < 0:
+                res_c.warning("⚠️ SOULÈVEMENT")
+            else:
+                res_c.success("✅ SOL OK")
+
+            # --- LE GRAPHIQUE EXPERT ---
+            fig2, ax2 = plt.subplots(figsize=(10, 5))
+            
+            # 1. Dessin de la pression au sol (Ligne bleue)
+            ax2.plot([0, L_totale], [sig1, sig2], 'b-', linewidth=3, label="Pression Sol (kPa)")
+            ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.1, color='blue')
+            
+            # 2. Ligne de la contrainte admissible (Rouge)
+            ax2.axhline(qadm, color='red', linestyle='--', label=f"Limite Sol ({qadm} kPa)")
+            
+            # 3. Marquage des Poteaux (Position réelle sur la semelle)
+            # On place les flèches un peu au-dessus de la valeur max pour la visibilité
+            y_offset = max(sig_max, qadm) * 0.1
+            for i, p_pos in enumerate(pos_x):
+                ax2.annotate('↓', (p_pos, -y_offset), ha='center', fontsize=20, color='black')
+                ax2.text(p_pos, -y_offset*2.5, f"P{i+1}", ha='center', fontweight='bold')
+
+            # 4. Ligne du Centre de Gravité des charges (Vert pointillé)
+            ax2.axvline(x_cg, color='green', linestyle=':', linewidth=2, label=f"Centre Gravité G ({x_cg:.2f}m)")
+            
+            # 5. Zone du Tiers Central (Zone de stabilité totale)
+            ax2.axvspan(L_totale/3, 2*L_totale/3, color='yellow', alpha=0.1, label="Tiers Central")
+
+            # Configuration esthétique
+            ax2.set_xlim(0, L_totale)
+            ax2.set_xlabel("Longueur de la semelle (m)")
+            ax2.set_ylabel("Pression (kPa)")
+            ax2.set_title("Répartition des contraintes sous la semelle", fontsize=12)
+            ax2.legend(loc='lower right', fontsize='small')
+            ax2.grid(True, linestyle='--', alpha=0.5)
+            
+            st.pyplot(fig2)
+
+            # --- DIAGNOSTIC RAPIDE ---
+            st.divider()
+            if abs(excentricite) < L_totale / 6:
+                st.info(f"💡 **Conseil** : Vos charges sont bien centrées. La semelle travaille de manière optimale.")
+            else:
+                st.warning(f"💡 **Conseil** : L'excentricité est importante. Vérifiez le ferraillage supérieur de la longrine.")
 
     with tab2:
         st.subheader("Ferraillage du Rideau")

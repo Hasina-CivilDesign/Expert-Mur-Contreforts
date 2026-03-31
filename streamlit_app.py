@@ -45,10 +45,6 @@ if menu == "🏠 Accueil":
 elif menu == "🧱 Mur à Contreforts":
     st.header("🧱 Expertise : Mur à Contreforts (BAEL)")
     
-import streamlit as st
-import math
-import matplotlib.pyplot as plt
-import pandas as pd
 
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Expert Mur Contreforts", layout="wide")

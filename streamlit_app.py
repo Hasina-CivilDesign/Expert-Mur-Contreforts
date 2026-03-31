@@ -157,8 +157,7 @@ with tab1:
 with tab2:
     st.subheader("Ferraillage du Rideau")
 
-
-     def verifier_densite(as_calc):
+def verifier_densite(as_calc):
          if as_calc > 10: return "❌ TROP DENSE"
          if as_calc > 7: return "⚠️ ÉLEVÉ"
          return "✅ OK"

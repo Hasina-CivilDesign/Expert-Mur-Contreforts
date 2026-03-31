@@ -245,21 +245,56 @@ elif menu == "📐 Semelle Filante":
             # Onglets pour le détail
             t1, t2 = st.tabs(["📊 Analyse Stabilité", "🏗️ Ferraillage & Charges"])
             
-            with t1:
-                st.subheader("Répartition des pressions sur le sol")
-                fig2, ax2 = plt.subplots(figsize=(10, 4))
-                ax2.plot([0, L_totale], [sig1, sig2], 'b-o', label="Pression (kPa)")
-                ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.2, color='blue')
-                ax2.axhline(qadm, color='red', linestyle='--', label="Limite Sol")
+           with t1:
+                st.subheader("📊 Analyse de la Portance & Équilibre")
+                
+                # --- RAPPEL DES CHIFFRES CLÉS ---
+                res_a, res_b, res_c = st.columns(3)
+                res_a.metric("Pression Max (σ1)", f"{sig_max:.2f} kPa")
+                res_b.metric("Excentricité (e)", f"{excentricite:.3f} m")
+                
+                if sig_max > qadm:
+                    res_c.error("❌ SOL INSUFFISANT")
+                elif sig2 < 0:
+                    res_c.warning("⚠️ SOULÈVEMENT")
+                else:
+                    res_c.success("✅ SOL OK")
+
+                # --- LE GRAPHIQUE EXPERT ---
+                fig2, ax2 = plt.subplots(figsize=(10, 5))
+                
+                # 1. Dessin de la pression au sol
+                ax2.plot([0, L_totale], [sig1, sig2], 'b-', linewidth=3, label="Pression Sol (kPa)")
+                ax2.fill_between([0, L_totale], [sig1, sig2], alpha=0.1, color='blue')
+                
+                # 2. Ligne de la contrainte admissible
+                ax2.axhline(qadm, color='red', linestyle='--', label=f"Limite Sol ({qadm} kPa)")
+                
+                # 3. Marquage des Poteaux
+                y_offset = max(sig_max, qadm) * 0.1
+                for i, p_pos in enumerate(pos_x):
+                    ax2.annotate('↓', (p_pos, -y_offset), ha='center', fontsize=20, color='black')
+                    ax2.text(p_pos, -y_offset*2.5, f"P{i+1}", ha='center', fontweight='bold')
+
+                # 4. Ligne du Centre de Gravité (Vert)
+                ax2.axvline(x_cg, color='green', linestyle=':', linewidth=2, label=f"Centre Gravité ({x_cg:.2f}m)")
+                
+                # 5. Zone du Tiers Central
+                ax2.axvspan(L_totale/3, 2*L_totale/3, color='yellow', alpha=0.1, label="Tiers Central")
+
+                ax2.set_xlim(0, L_totale)
                 ax2.set_xlabel("Longueur de la semelle (m)")
-                ax2.set_ylabel("Contrainte (kPa)")
-                ax2.legend()
+                ax2.set_ylabel("Pression (kPa)")
+                ax2.legend(loc='lower right', fontsize='small')
+                ax2.grid(True, linestyle='--', alpha=0.5)
                 st.pyplot(fig2)
 
-                st.write("**Détail des charges :**")
-                st.write(f"- Poids Semelle : {P_semelle:.2f} kN")
-                st.write(f"- Poids Longrine : {P_longrine:.2f} kN")
-                st.write(f"- Charge Poteaux (G+Q) : {sum(P_poteaux_total):.2f} kN")
+                # --- DIAGNOSTIC RAPIDE ---
+                st.divider()
+                if abs(excentricite) < L_totale / 6:
+                    st.info(f"💡 **Conseil** : Les charges sont bien centrées (dans le tiers central).")
+                else:
+                    st.warning(f"💡 **Conseil** : L'excentricité est hors du tiers central. Risque de décollement ou de forte compression locale.")
 
             with t2:
                 # Ferraillage transversal

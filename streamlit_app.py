@@ -88,16 +88,34 @@ elif menu == "🧱 Mur à Contreforts":
     tab1, tab2, tab3 = st.tabs(["📊 Stabilité", "🧱 Rideau", "📐 Contrefort & Bilan"])
 
     with tab1:
-        st.subheader("Vérification de la Stabilité")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Sigma Patin", f"{sigma_1:.2f} kPa")
-        c2.metric("Sigma Talon", f"{sigma_2:.2f} kPa")
-        c3.metric("Statut Sol", "✅ OK" if sigma_1 <= sigma_sol_adm else "❌ EXCES")
-        fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot([0, B], [sigma_1, sigma_2], 'r-', linewidth=2)
+        st.subheader("📊 Analyse de la Stabilité & Portance")
+        
+        # --- MÉTRIQUES CLÉS ---
+        res_a, res_b, res_c = st.columns(3)
+        res_a.metric("Sigma Patin (σ1)", f"{sigma_1:.2f} kPa")
+        res_b.metric("Sigma Talon (σ2)", f"{sigma_2:.2f} kPa")
+        
+        if sigma_1 > sigma_sol_adm:
+            res_c.error("❌ SOL INSUFFISANT")
+        elif sigma_2 < 0:
+            res_c.warning("⚠️ RISQUE DE SOULÈVEMENT")
+        else:
+            res_c.success("✅ STABILITÉ OK")
+
+        # --- LE GRAPHIQUE ---
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot([0, B], [sigma_1, sigma_2], 'r-', linewidth=3, label="Pression (kPa)")
         ax.fill_between([0, B], [sigma_1, sigma_2], color='red', alpha=0.1)
-        ax.axhline(0, color='black')
+        ax.axhline(sigma_sol_adm, color='black', linestyle='--', label=f"Limite Sol ({sigma_sol_adm} kPa)")
+        
+        ax.set_xlabel("Largeur de la semelle B (m)")
+        ax.set_ylabel("Contrainte (kPa)")
+        ax.legend(loc='upper right')
+        ax.grid(True, linestyle='--', alpha=0.5)
         st.pyplot(fig)
+
+        if sigma_1 > sigma_sol_adm:
+            st.error(f"💡 **Conseil** : La pression au patin ({sigma_1:.2f} kPa) dépasse la capacité du sol. Élargissez la semelle B.")
 
     with tab2:
         st.subheader("Ferraillage du Rideau")

@@ -50,7 +50,56 @@ elif menu == "🧱 Mur à Contreforts":
     st.warning("⚠️ Recolle ici ton code du mur pour le réactiver.")
 
 # --- MODULE SEMELLE FILANTE ---
+# --- MODULE SEMELLE FILANTE ---
 elif menu == "📐 Semelle Filante":
+    st.header("📐 Expertise : Semelle Filante + Longrine")
+
+    # --- BARRE LATÉRALE POUR LA SEMELLE ---
+    with st.sidebar:
+        st.subheader("Paramètres de la Semelle")
+        B_sem = st.number_input("Largeur semelle B (m)", value=0.60, step=0.05)
+        h_sem = st.number_input("Hauteur semelle h (m)", value=0.30, step=0.05)
+        q_adm = st.number_input("Contrainte sol admissible (kPa/kN/m²)", value=200.0)
+        
+        st.subheader("Charges Poteaux")
+        g_poteau = st.number_input("Charge Permanente G totale (kN)", value=150.0)
+        q_poteau = st.number_input("Charge Variable Q totale (kN)", value=50.0)
+        
+        st.subheader("Géométrie du projet")
+        L_totale_sem = st.number_input("Longueur totale de la semelle (m)", value=10.0)
+        dist_poteaux = st.text_input("Entraxes entre poteaux (m)", value="3.5 3.5 3.0")
+
+    # --- CALCULS ---
+    # (On simplifie la logique de ton script pour l'affichage Streamlit)
+    N_elu = 1.35 * g_poteau + 1.5 * q_poteau
+    surface_sem = B_sem * L_totale_sem
+    poids_propre_sem = B_sem * h_sem * L_totale_sem * 25 # 25 kN/m3 pour le BA
+    
+    N_total_ser = (g_poteau + q_poteau + poids_propre_sem)
+    sigma_sol_calc = N_total_ser / surface_sem
+
+    # --- AFFICHAGE DES RÉSULTATS ---
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("Pression sur le sol", f"{sigma_sol_calc:.2f} kPa")
+        if sigma_sol_calc <= q_adm:
+            st.success("✅ Capacité portante OK")
+        else:
+            st.error("❌ Sol insuffisant ! Augmentez B.")
+
+    with col2:
+        st.metric("Charge Totale (ELS)", f"{N_total_ser:.2f} kN")
+
+    # Petit graphique de la section
+    fig2, ax2 = plt.subplots(figsize=(6, 2))
+    ax2.add_patch(plt.Rectangle((0, 0), B_sem, h_sem, color='grey', alpha=0.5, label="Semelle"))
+    ax2.set_xlim(-0.2, B_sem + 0.2)
+    ax2.set_ylim(-0.1, h_sem + 0.2)
+    ax2.set_title("Coupe de la Semelle")
+    st.pyplot(fig2)
+
+    st.info("💡 Prochaine amélioration : Calcul du ferraillage transversal automatique.")
     st.header("📐 Expertise : Semelle Filante + Longrine")
     st.info("🚧 Ce module est en cours d'intégration. On va transformer ton script Python en interface Web ici.")
 

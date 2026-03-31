@@ -47,7 +47,7 @@ elif menu == "🧱 Mur à Contreforts":
     
 
 # --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="Expert Mur Contreforts", layout="wide")
+
 
 st.title("🏗️ Logiciel d'Expertise : Mur à Contreforts (BAEL)")
 st.write("Calcul complet : Stabilité, Rideau par tranches, Semelle et Contreforts.")

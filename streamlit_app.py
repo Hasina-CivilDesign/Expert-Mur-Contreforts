@@ -389,3 +389,36 @@ elif menu == "🌉 Poutre Continue":
     c1, c2 = st.columns(2)
     c1.metric("Moment Max Absolu", f"{m_max:.3f} kNm")
     c2.metric("Section Acier (As)", f"{as_est:.3f} cm²")
+
+    # --- SECTION FERRAILLAGE RÉEL ---
+st.header("🏗️ Choix du Ferraillage Réel")
+
+col_f1, col_f2 = st.columns(2)
+
+with col_f1:
+    diametre_base = st.selectbox("Diamètre principal (Travée)", [10, 12, 14, 16], index=1, help="Diamètre des barres de traction en bas")
+    nb_barres = st.number_input("Nombre de barres", min_value=2, max_value=6, value=3)
+    
+    # Calcul de la section réelle fournie
+    section_fournie = nb_barres * (3.1415 * (diametre_base/20)**2) # en cm2
+    st.write(f"Section Acier fournie : **{section_fournie:.2f} cm²**")
+
+with col_f2:
+    st.info("💡 **Mode Optimisation**")
+    # Le bouton est désactivé (simulateur de version Pro)
+    st.checkbox("Mélanger les diamètres (ex: 2HA12 + 1HA10)", disabled=True)
+    if st.button("🚀 Activer l'optimisation économique"):
+        st.warning("🔒 **Option Verrouillée** : L'optimisation automatique pour réduire le coût du fer est disponible dans la version **Expertise**. Contactez l'ingénieur pour une note de calcul optimisée.")
+
+# --- VÉRIFICATION ET VOYANTS ---
+section_requise = as_estime # On récupère la valeur calculée plus haut
+if section_fournie >= section_requise:
+    st.success(f"✅ **CONFORME** : {section_fournie:.2f} cm² > {section_requise:.2f} cm²")
+else:
+    st.error(f"❌ **INSUFFISANT** : Il manque {(section_requise - section_fournie):.2f} cm²")
+
+# --- LE FERRAILLAGE TRANSVERSAL (CADRES) ---
+st.subheader("⛓️ Armatures Transversales (Cadres)")
+phi_t = st.selectbox("Diamètre cadres", [6, 8], index=0)
+st.write(f"Espacement maximum conseillé près des appuis : **15 cm**")
+st.caption("Le détail des espacements (Loi de Caquot) est inclus dans la note de calcul exportée.")

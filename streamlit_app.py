@@ -53,7 +53,7 @@ st.title("🏗️ Logiciel d'Expertise : Mur à Contreforts (BAEL)")
 st.write("Calcul complet : Stabilité, Rideau par tranches, Semelle et Contreforts.")
 
  # --- BARRE LATÉRALE : SAISIE DES DONNÉES ---
- with st.sidebar:
+with st.sidebar:
     st.header("1. Paramètres Sol & Béton")
     gamma_t = st.number_input("Poids volumique terre (kN/m3)", value=16.0)
     phi_deg = st.slider("Angle de frottement φ (°)", 20, 45, 35)

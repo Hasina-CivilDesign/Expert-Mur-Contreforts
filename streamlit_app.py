@@ -383,6 +383,67 @@ elif menu == "🌉 Poutre Continue":
             st.subheader("📋 Moments aux Appuis")
             for i, m in enumerate(M_elu):
                 st.write(f"Appui {i+1} : **{abs(m):.2f} kNm**")
+
+        # ... (après le calcul de M_elu par la matrice) ...
+
+        # 3. CALCUL DES MOMENTS EN TRAVÉE ET EFFORTS TRANCHANTS
+        st.subheader("📋 Résultats Détaillés (ELU)")
+        
+        # Création d'un tableau pour l'affichage
+        data_travées = []
+        
+        pos_x = 0
+        for i in range(n):
+            L_i = L[i]
+            p_i = P_elu[i]
+            Mw = M_elu[i]   # Moment Appui Gauche (West)
+            Me = M_elu[i+1] # Moment Appui Droit (East)
+            
+            # Calcul de la position du moment max (X_i) dans la travée
+            # Formule : x = L/2 + (Me - Mw)/(p*L)
+            xi_max = (L_i / 2) + (Me - Mw) / (p_i * L_i)
+            
+            # Calcul du moment max en travée
+            mt_max = Mw * (1 - xi_max/L_i) + Me * (xi_max/L_i) + p_i * xi_max * (L_i - xi_max) / 2
+            
+            # Effort tranchant aux appuis
+            Vw = -p_i * L_i / 2 + (Mw - Me) / L_i
+            Ve = p_i * L_i / 2 + (Mw - Me) / L_i
+            
+            data_travées.append({
+                "Travée": i + 1,
+                "L (m)": L_i,
+                "M. Gauche (kNm)": round(Mw, 2),
+                "M. Travée (kNm)": round(mt_max, 2),
+                "M. Droit (kNm)": round(Me, 2),
+                "V. Max (kN)": round(max(abs(Vw), abs(Ve)), 2)
+            })
+
+        # Affichage sous forme de beau tableau Streamlit
+        st.table(data_travées)
+
+        # --- MISE À JOUR DU GRAPHIQUE AVEC POINTS MAX ---
+        with st.expander("📊 Voir le Diagramme des Moments"):
+            fig_poutre, ax_poutre = plt.subplots(figsize=(10, 4))
+            pos_current = 0
+            for i in range(n):
+                x_vals = np.linspace(0, L[i], 100)
+                M_vals = M_elu[i]*(1 - x_vals/L[i]) + M_elu[i+1]*(x_vals/L[i]) + P_elu[i]*x_vals*(L[i] - x_vals)/2
+                
+                ax_poutre.plot(pos_current + x_vals, -M_vals, color="#1f77b4", linewidth=2.5)
+                ax_poutre.fill_between(pos_current + x_vals, -M_vals, alpha=0.15, color="#1f77b4")
+                
+                # Ajout du texte pour le moment max en travée sur le graphe
+                xi_plot = (L[i]/2) + (M_elu[i+1] - M_elu[i])/(P_elu[i]*L[i])
+                mt_plot = M_elu[i]*(1 - xi_plot/L[i]) + M_elu[i+1]*(xi_plot/L[i]) + P_elu[i]*xi_plot*(L[i] - xi_plot)/2
+                ax_poutre.text(pos_current + xi_plot, -mt_plot - 2, f"{mt_plot:.1f}", 
+                               ha='center', color='blue', fontsize=9, fontweight='bold')
+                
+                pos_current += L[i]
+            
+            ax_poutre.axhline(0, color='black', linewidth=1.5)
+            ax_poutre.invert_yaxis() # Inversion pour le sens "béton armé"
+            st.pyplot(fig_poutre)
             
             # Calcul Ferraillage Rapide sur l'appui le plus sollicité
             m_max_appui = abs(min(M_elu))

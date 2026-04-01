@@ -30,9 +30,9 @@ def check_password():
             st.error("❌ Clé invalide.")
     return False
 
-# 3. LE FILTRE DE SÉCURITÉ
-if check_password():
-    # --- TOUT CE QUI EST ICI EST PROTÉGÉ ---
+    # 3. LE FILTRE DE SÉCURITÉ
+    if check_password():
+     # --- TOUT CE QUI EST ICI EST PROTÉGÉ ---
 
 # --- 2. BARRE LATÉRALE : NAVIGATION ---
 with st.sidebar:

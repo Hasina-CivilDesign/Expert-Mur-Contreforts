@@ -508,7 +508,8 @@ elif menu == "🌉 Poutre Continue":
         pdf.cell(95, 7, f"Hauteur (h) : {h * 100:.0f} cm")
         pdf.ln(7)
         pdf.cell(95, 7, f"Beton : C25/30 (fc28 = 25 MPa)")
-        pdf.cell(95, 7, f"Acier : FeE500 (fe = 500 MPa)")
+       # Cherche cette ligne dans la fonction generate_pdf et modifie-la :
+        pdf.cell(95, 7, f"Acier : FeE{fe} (fe = {fe} MPa)")
         pdf.ln(12)
 
         # --- RÉSULTATS ---
@@ -555,6 +556,7 @@ elif menu == "🌉 Poutre Continue":
             as_estime,
             section_fournie,
             int(st_regle)
+            fe
         )
 
         # 2. On crée le bouton de téléchargement Streamlit

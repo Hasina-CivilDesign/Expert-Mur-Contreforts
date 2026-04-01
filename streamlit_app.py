@@ -9,6 +9,9 @@ import numpy as np  # Ajoute bien celui-ci aussi base64
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Hub Ingénierie Madagascar", layout="wide")
 
+# --- 1. CONFIGURATION DE LA PAGE ---
+st.set_page_config(page_title="Hub Ingénierie Madagascar", layout="wide")
+
 # 2. LA FONCTION DE SÉCURITÉ
 def check_password():
     if "password_correct" not in st.session_state:
@@ -30,10 +33,44 @@ def check_password():
             st.error("❌ Clé invalide.")
     return False
 
-    # 3. LE FILTRE DE SÉCURITÉ
-    if check_password():
-     # --- TOUT CE QUI EST ICI EST PROTÉGÉ ---
+# 3. LE FILTRE DE SÉCURITÉ
+if check_password():
+    # --- TOUT CE QUI EST ICI EST PROTÉGÉ ---
+    # Remarque : Tout ce qui suit est décalé vers la droite !
 
+    # --- 2. BARRE LATÉRALE : NAVIGATION ---
+    with st.sidebar:
+        st.title("🏗️ Engineering Hub")
+        st.subheader("Par Hasina R.")
+
+        menu = st.radio(
+            "Choisir un module :",
+            ["🏠 Accueil", "📐 Calcul Ferraillage (As)", "🧱 Mur à Contreforts", "📐 Semelle Filante", "🌉 Poutre Continue"]
+        )
+
+        st.divider()
+        st.write("✉️ [Contact : hasinarabialahy@gmail.com](mailto:hasinarabialahy@gmail.com)")
+        
+        # Petit bouton pour se déconnecter (optionnel mais pro)
+        if st.button("Se déconnecter"):
+            st.session_state["password_correct"] = False
+            st.rerun()
+
+    # --- 3. AFFICHAGE DES MODULES ---
+    if menu == "🏠 Accueil":
+        st.title("Bienvenue sur votre plateforme technique")
+        st.write("Sélectionnez un outil dans le menu de gauche pour démarrer.")
+        
+    elif menu == "📐 Calcul Ferraillage (As)":
+        st.title("Calcul de Ferraillage (BAEL)")
+        st.write("Ici, on va coller ton super code de calcul As !")
+        # C'est ici que tu placeras tes st.number_input() pour M, b, h...
+
+    elif menu == "🧱 Mur à Contreforts":
+        st.title("Module : Mur à Contreforts")
+        st.write("Interface de calcul pour murs de soutènement.")
+
+    # ... Et ainsi de suite
 # --- 2. BARRE LATÉRALE : NAVIGATION ---
 with st.sidebar:
     st.title("🏗️ Engineering Hub")

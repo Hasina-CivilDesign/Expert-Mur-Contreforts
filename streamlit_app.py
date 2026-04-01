@@ -555,7 +555,7 @@ elif menu == "🌉 Poutre Continue":
             m_max,
             as_estime,
             section_fournie,
-            int(st_regle)
+            int(st_regle),
             fe
         )
 

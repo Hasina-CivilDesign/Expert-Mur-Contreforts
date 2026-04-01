@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 import base64
+import numpy as np  # Ajoute bien celui-ci aussi base64
 
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Hub Ingénierie Madagascar", layout="wide")

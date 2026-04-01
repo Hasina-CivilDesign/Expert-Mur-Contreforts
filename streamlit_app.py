@@ -484,7 +484,7 @@ elif menu == "🌉 Poutre Continue":
 
 
 
-    def generate_pdf(data_res, b, h, m_max, as_req, as_fournie, st_conseil):
+    def generate_pdf(data_res, b, h, m_max, as_req, as_fournie, st_conseil,fe):
         pdf = FPDF()
         pdf.add_page()
 

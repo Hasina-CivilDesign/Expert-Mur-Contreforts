@@ -322,10 +322,12 @@ elif menu == "🌉 Poutre Continue":
     with st.sidebar:
         st.subheader("📏 Paramètres Poutre")
         n = st.number_input("Nombre de travées", min_value=1, max_value=6, value=2)
+        fe = st.selectbox("Limite élastique acier fe (MPa)", [400, 500], index=0)
         b_poutre = st.number_input("Largeur b (m)", value=0.20)
         h_poutre = st.number_input("Hauteur h (m)", value=0.45)
         gamma_mat = st.number_input("Poids vol. (kN/m³)", value=25.0)
         g_pp = b_poutre * h_poutre * gamma_mat
+       
 
     # 2. SAISIE DES CHARGES (Main)
     L, G, Q = [], [], []

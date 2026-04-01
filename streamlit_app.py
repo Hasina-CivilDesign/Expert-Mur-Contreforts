@@ -527,7 +527,8 @@ elif menu == "🌉 Poutre Continue":
         pdf.cell(70, 10, f"{as_fournie:.2f} cm2 (Choisi)", 1, 1, 'C')
 
         pdf.cell(60, 10, "Cisaillement (Cadres)", 1, 0, 'C')
-        pdf.cell(60, 10, "V_max", 1, 0, 'C')
+       # On affiche la valeur réelle avec l'unité kN
+        pdf.cell(60, 10, f"{v_max_global:.2f} kN", 1, 0, 'C')
         pdf.cell(70, 10, f"Espacement : {st_conseil} cm", 1, 1, 'C')
         pdf.ln(15)
 

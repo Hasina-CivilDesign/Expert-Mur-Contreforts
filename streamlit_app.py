@@ -9,6 +9,31 @@ import numpy as np  # Ajoute bien celui-ci aussi base64
 # --- 1. CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="Hub Ingénierie Madagascar", layout="wide")
 
+# 2. LA FONCTION DE SÉCURITÉ
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+
+    if st.session_state["password_correct"]:
+        return True
+
+    # Formulaire de login
+    st.title("🏗️ Hasina Engineering Hub")
+    st.subheader("Accès réservé aux ingénieurs partenaires")
+    
+    password = st.text_input("Veuillez entrer votre clé d'accès :", type="password")
+    if st.button("Se connecter"):
+        if password == "MADA2026": # Ton mot de passe secret
+            st.session_state["password_correct"] = True
+            st.rerun()
+        else:
+            st.error("❌ Clé invalide.")
+    return False
+
+# 3. LE FILTRE DE SÉCURITÉ
+if check_password():
+    # --- TOUT CE QUI EST ICI EST PROTÉGÉ ---
+
 # --- 2. BARRE LATÉRALE : NAVIGATION ---
 with st.sidebar:
     st.title("🏗️ Engineering Hub")

@@ -401,7 +401,11 @@ elif menu == "🌉 Poutre Continue":
     m_max = max([abs(m) for m in M_elu] + [d['M. Travée'] for d in data_res])
 
     # Correction : On utilise le nom as_estime partout
-    as_estime = (m_max * 1e-3) / (0.9 * (h_poutre - 0.05) * (500 / 1.15)) * 1e4
+   # Calcul de la contrainte de calcul fsu (fe / 1.15)
+    fsu = fe / 1.15
+    
+    # Mise à jour du calcul de As avec la variable fe
+    as_estime = (m_max * 1e-3) / (0.9 * (h_poutre - 0.05) * fsu) * 1e4
 
     c1, c2 = st.columns(2)
     c1.metric("Moment Max Absolu", f"{m_max:.3f} kNm")
